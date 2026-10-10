@@ -4,3 +4,11 @@ export function createSequence(points,length,band,scale){const notes=Array(lengt
 export function stepAt(tick,length){return ((tick%length)+length)%length}
 // Spread a total note budget across voices before filling remaining slots.
 export function limitSequences(sequences,budget){const result=sequences.map(s=>Array(s.length).fill(null)),queues=sequences.map(s=>s.map((note,index)=>({note,index})).filter(p=>p.note).sort((a,b)=>b.note.energy-a.note.energy||a.index-b.index));let remaining=Math.max(0,Math.floor(budget));while(remaining&&queues.some(q=>q.length)){for(let i=0;i<queues.length&&remaining;i++){const selected=queues[i].shift();if(selected){result[i][selected.index]=selected.note;remaining--}}}return result}
+
+// Use a circular region in screen space while retaining the image's pitch mapping.
+export function lensSequence(points,length,band,scale,lens,aspect=1){
+ const inside=points.filter(p=>Math.hypot((p.x-lens.x)*aspect,p.y-lens.y)<=lens.radius);
+ const notes=Array(length).fill(null);
+ for(const p of inside){const localX=(p.x-lens.x)*aspect/(lens.radius*2)+.5;const step=Math.max(0,Math.min(length-1,Math.floor(localX*length)));if(!notes[step]||p.energy>notes[step].energy)notes[step]={midi:pitch(p.y,scale,band===0?1:0),velocity:.12+p.z*.38,depth:p.z,energy:p.energy,point:p}}
+ return notes;
+}
