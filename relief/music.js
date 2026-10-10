@@ -1,0 +1,4 @@
+export const scales={minor:[0,2,3,5,7,8,10],pentatonic:[0,3,5,7,10],dorian:[0,2,3,5,7,9,10],major:[0,2,4,5,7,9,11]};
+export function pitch(y,scale='minor',octave=0){const s=scales[scale]||scales.minor;const degree=Math.min(s.length*2-1,Math.floor(Math.max(0,Math.min(1,1-y))*s.length*2));return 45+octave*12+12*Math.floor(degree/s.length)+s[degree%s.length]}
+export function createSequence(points,length,band,scale){const notes=Array(length).fill(null);for(const p of points){if(Math.min(2,Math.floor(p.y*3))!==band)continue;const step=Math.min(length-1,Math.floor(p.x*length));if(!notes[step]||p.energy>notes[step].energy)notes[step]={midi:pitch(p.y,scale,band===0?1:0),velocity:.12+p.z*.38,depth:p.z,energy:p.energy}}return notes}
+export function stepAt(tick,length){return ((tick%length)+length)%length}
