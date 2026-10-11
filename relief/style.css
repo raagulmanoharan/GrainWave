@@ -88,3 +88,11 @@ body[data-mode=camera] .visual-instruction{top:50%;left:20px;right:20px;transfor
 
 body[data-mode=playing] .landing-description{display:none}
 .landing-description{z-index:3}
+
+@font-face{font-family:ReliefBlackletter;src:url('fonts/UnifrakturMaguntia.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+#landing-type{position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none}
+.type-accessible{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+body[data-mode=camera] .stage::after{background:rgba(0,0,0,.9)}
+#play,#open-settings,#flip-camera{z-index:4}
+
+.visual-instruction{height:1px}

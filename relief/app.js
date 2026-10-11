@@ -1,4 +1,6 @@
-import {drawPosterPaths} from './poster-paths.js?v=wordmark-1';
+import {LandingType} from './landing-type.js?v=type-stack-1';
+const landingType=new LandingType();
+import {drawPosterPaths} from './poster-paths.js?v=type-stack-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
@@ -86,7 +88,7 @@ function perform(time){
  }
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
 }
-function syncPreview(){document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',playing);$('play').setAttribute('aria-label',playing?'Pause instrument':'Start the live instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
+function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',playing);$('play').setAttribute('aria-label',playing?'Pause instrument':'Start the live instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
 function stop(){visualLoop.reset(performance.now());loopHighlights=[];accent=null;motionEcho.reset();playing=false;song=new MotifSong();songStep=0;nextSongTime=0;lastPercussion=-Infinity;percussionStep=0;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
 $('play').onclick=async()=>{if(playing){stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;visualLoop.reset(performance.now());loopHighlights=[];song=new MotifSong();songStep=0;nextSongTime=audio.currentTime;playing=true;master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
 $('threshold').oninput=()=>updateThreshold(+$('threshold').value/100);
