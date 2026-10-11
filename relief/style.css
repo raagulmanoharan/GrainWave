@@ -301,3 +301,6 @@ body[data-mode=camera] #loop-link{display:none}
 #loop-progress{stroke:var(--selected-loop-color,#ff453a)}
 
 .gesture-guide{display:none}
+
+/* Shared cell boundaries are drawn once. */
+#loop-tools button,#loop-tools #play,#loop-stack .loop-block{border-bottom-width:0}
