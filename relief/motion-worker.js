@@ -1,4 +1,4 @@
-import {MotionTracker} from './motion.js?v=responsive-2';
+import {MotionTracker} from './motion.js?v=instant-1';
 const tracker=new MotionTracker();
 self.onmessage=({data:d})=>{
  if(d.type==='reset'){tracker.reset();return}

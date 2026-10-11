@@ -21,7 +21,7 @@ void main(){
  vec3 point=vec3((uv.x-.5)*2.*uAspect*z/2.8,(.5-uv.y)*2.*z/2.8,z);
  vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(0,1),vec2(0,1),vec2(1,0),vec2(1,1));
  vec2 q=corners[gl_VertexID];vFace=q;
- float height=2./uGrid.y+uDepth*(.003+field*.055);
+ float height=2./uGrid.y+uDepth*(.003+field*.12);
  height+=flow.b*uDepth*.025;
  point.y+=(1.-q.y)*height;
  point.x+=velocity.x/uSize.x*(1.-q.y)*2.;
@@ -36,6 +36,7 @@ precision highp float;
 in vec2 vFace;in vec3 vColor;in float vLight,vHeight,vNoise,vKeep;out vec4 fragColor;
 void main(){
  if(vKeep<.5)discard;
+ float grain=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);if(grain<.42)discard;
  float l=dot(vColor,vec3(.2126,.7152,.0722));
  vec3 shadow=vec3(.055,.003,.009),red=vec3(.66,.065,.018),copper=vec3(1.,.39,.13);
  float face=pow(1.-vFace.y,.65);float side=.58+.42*sin(vFace.x*3.14159);
@@ -43,20 +44,20 @@ void main(){
  vec3 base=mix(shadow,red,tone)*(.45+face*.55)*side*(.65+vLight*.5);
  float cap=1.-smoothstep(.025,.085,vFace.y);base=mix(base,copper*(.4+.6*tone),cap*.4*smoothstep(.15,.85,vNoise));
  float edge=pow(1.-abs(vFace.x*2.-1.),5.);base+=red*edge*.08;
- fragColor=vec4(mix(base,vec3(1.,.74,.43),.35),.85);
+ fragColor=vec4(mix(base,vec3(1.,.74,.43),.35)*(.5+grain*.7),1.);
 }`;
 
 export class DepthCloud {
  constructor(canvas,onStatus=()=>{}) {
   this.canvas=canvas;this.onStatus=onStatus;this.generation=0;this.ready=false;this.busy=false;this.failed=false;this.last=0;this.lastDraw=0;this.maps=0;
-  const gl=this.gl=canvas.getContext('webgl2',{alpha:true,premultipliedAlpha:false,antialias:false});
+  const gl=this.gl=canvas.getContext('webgl2',{alpha:false,premultipliedAlpha:false,antialias:false});
   if(!gl){this.failed=true;onStatus('Depth visual unavailable · showing camera');return}
   const compile=(type,source)=>{const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader};
   const program=this.program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);gl.bindVertexArray(gl.createVertexArray());gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   this.uniforms=Object.fromEntries(['uImage','uMap','uFlow','uGrid','uDepth','uTime','uSize','uAspect'].map(n=>[n,gl.getUniformLocation(program,n)]));
   this.textures=[0,1,2].map(i=>{gl.activeTexture(gl.TEXTURE0+i);const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);for(const [key,value] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,key,value);return texture});gl.uniform1i(this.uniforms.uImage,0);gl.uniform1i(this.uniforms.uMap,1);gl.uniform1i(this.uniforms.uFlow,2);
   this.capture=document.createElement('canvas');this.context=this.capture.getContext('2d',{willReadFrequently:true});
-  this.worker=new Worker(new URL('./effect-preview/depth-worker.js',import.meta.url),{type:'module'});
+  this.worker=new Worker(new URL('./effect-preview/depth-worker.js?fast=1',import.meta.url),{type:'module'});
   this.worker.onmessage=({data})=>{
    if(data.status){onStatus('Preparing depth visual…');return}
    this.busy=false;if(data.id!==this.generation)return;
@@ -75,7 +76,7 @@ export class DepthCloud {
  }
  restart(){
   const onmessage=this.worker.onmessage,onerror=this.worker.onerror;this.worker.terminate();
-  const url=new URL('./effect-preview/depth-worker.js',import.meta.url);url.searchParams.set('wasm','1');
+  const url=new URL('./effect-preview/depth-worker.js',import.meta.url);url.searchParams.set('wasm','1');url.searchParams.set('fast','1');
   this.worker=new Worker(url,{type:'module'});this.worker.onmessage=onmessage;this.worker.onerror=onerror;
   this.generation++;this.busy=false;this.last=0;this.retried=true;this.onStatus('Refreshing depth · motion visual stays live');
  }
@@ -86,7 +87,7 @@ export class DepthCloud {
   const gl=this.gl,c=this.canvas,r=c.parentElement.getBoundingClientRect(),d=Math.min(devicePixelRatio,1.25);
   const width=Math.max(1,Math.round(r.width*d)),height=Math.max(1,Math.round(r.height*d));
   if(c.width!==width||c.height!==height){c.width=width;c.height=height;gl.viewport(0,0,width,height)}
-  if(time-this.lastDraw<33)return this.ready;this.lastDraw=time;
+  if(time-this.lastDraw<50)return this.ready;this.lastDraw=time;
   const fh=Math.min(128,Math.round(80*height/width)),fw=Math.max(1,Math.round(fh*width/height));
   if(this.flowWidth!==fw||this.flowHeight!==fh){this.reset();this.flowWidth=fw;this.flowHeight=fh;this.serial=0;this.history=[];}
   this.capture.width=fw;this.capture.height=fh;drawCamera(this.context,fw,fh);
@@ -106,6 +107,6 @@ export class DepthCloud {
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.textures[1]);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,fw,fh,0,gl.RED,gl.UNSIGNED_BYTE,depths);
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,this.textures[2]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,fw,fh,0,gl.RGBA,gl.UNSIGNED_BYTE,vectors);
   gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.textures[0]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,this.capture);
-  const cols=220,rows=Math.round(cols*height/width);gl.uniform2f(this.uniforms.uGrid,cols,rows);gl.uniform1f(this.uniforms.uAspect,width/height);gl.uniform1f(this.uniforms.uDepth,stretch);gl.uniform1f(this.uniforms.uTime,time*.001);gl.uniform2f(this.uniforms.uSize,this.capture.width,this.capture.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);c.hidden=false;c.dataset.depthMaps=this.maps;c.dataset.motion=flow.reduce((sum,v,i)=>sum+(i%3===2?v:0),0).toFixed(2);return true;
+  const cols=220,rows=Math.round(cols*height/width);gl.uniform2f(this.uniforms.uGrid,cols,rows);gl.uniform1f(this.uniforms.uAspect,width/height);gl.uniform1f(this.uniforms.uDepth,stretch);gl.uniform1f(this.uniforms.uTime,time*.001);gl.uniform2f(this.uniforms.uSize,this.capture.width,this.capture.height);gl.clearColor(.008,.005,.009,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);c.hidden=false;c.dataset.depthMaps=this.maps;c.dataset.motion=flow.reduce((sum,v,i)=>sum+(i%3===2?v:0),0).toFixed(2);return true;
  }
 }

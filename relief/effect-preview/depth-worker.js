@@ -4,11 +4,11 @@ self.onmessage=async({data})=>{
   if(!estimator){
    postMessage({status:'Loading depth model · first run downloads weights…'});
    const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/dist/transformers.min.js');
-   env.allowLocalModels=false;
+   env.allowLocalModels=false;env.backends.onnx.wasm.numThreads=1;
    let device='wasm';try{if(!new URL(self.location.href).searchParams.has('wasm')&&await navigator.gpu?.requestAdapter())device='webgpu'}catch{}
    try{estimator=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small',{device,dtype:'q8'})}catch(e){if(device==='wasm')throw e;estimator=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small',{device:'wasm',dtype:'q8'})}
    // Smaller, multiple-of-14 model input trades fine detail for live responsiveness.
-   estimator.processor.image_processor.size={height:252,width:252};
+   const size=new URL(self.location.href).searchParams.has('fast')?196:252;estimator.processor.image_processor.size={height:size,width:size};
   }
   const {RawImage}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/dist/transformers.min.js');
   const start=performance.now();

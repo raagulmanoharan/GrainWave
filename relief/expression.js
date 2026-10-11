@@ -19,7 +19,7 @@ export class MotionExpression {
  advance(now,{release=.56}={}){
   const dt=this.lastFrame===null?.016:Math.min(.1,Math.max(0,(now-this.lastFrame)/1000));this.lastFrame=now;
   const moving=now-this.lastMotion<220,target=moving?this.energy:0;
-  this.level+=(target-this.level)*(1-Math.exp(-dt/(target>this.level?.085:Math.max(.05,release*.5))));
+  this.level+=(target-this.level)*(1-Math.exp(-dt/(target>this.level?.015:Math.max(.05,release*.5))));
   const note=moving&&this.revision!==this.consumed;if(note)this.consumed=this.revision;
   return {level:this.level,moving,note,point:this.point,direction:this.direction};
  }
