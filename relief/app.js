@@ -1,6 +1,6 @@
 import {enhanceFrame} from './postprocess.js';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
-import {MotionTracker} from './motion.js';
+import {MotionTracker} from './motion.js?v=scene-detail-2';
 import {freezeLoop,audibleLoops} from './loops.js';
 import {stepAt} from './music.js';
 import {PointTracker,trackedSequences} from './tracking.js';
