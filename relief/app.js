@@ -1,8 +1,8 @@
-import {AmbientBed} from './ambient.js?v=ambient-1';
+import {AmbientBed} from './ambient.js?v=ambient-2';
 let ambientBed=null;
-import {LandingType} from './landing-type.js?v=ambient-1';
+import {LandingType} from './landing-type.js?v=ambient-2';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=ambient-1';
+import {drawPosterPaths} from './poster-paths.js?v=ambient-2';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
@@ -64,7 +64,7 @@ $('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();f
 $('mirror-toggle').onchange=()=>{visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong();motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(playing&&stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h);drawLoopProgress(w,h,time)}if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
-async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=build-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='2x';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);updateDistortion()}
+async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=mono-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='2x';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);updateDistortion()}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{numberOfOutputs:2,outputChannelCount:[2,2]});output.instrument.connect(output,0);output.instrument.connect(delay,1);output.instrument.connect(reverbWet.inputNode,1)}return output.instrument}
 function perform(time){
  ambientBed?.advance();
@@ -78,15 +78,13 @@ function perform(time){
  song.advance(time,state.level,[...expression.active.values()].filter(until=>until>time).length);
  while(nextSongTime<audio.currentTime+.08){
   for(const event of song.events(songStep,state.level,{loop:visualLoop.looping,bpm:+$('pulse').value}).filter(event=>event.role==='lead')){
-   instrument(master).port.postMessage({...event,kind:'bell',duration:1.8,level:.06,freq:event.freq||440*2**((event.midi-69)/12),time:nextSongTime+(event.offset||0),pan:event.pan??(state.point.x-.5)*.5});
+   instrument(master).port.postMessage({...event,monophonic:true,effectSend:0,kind:'bell',duration:1.8,level:.06,freq:event.freq||440*2**((event.midi-69)/12),time:nextSongTime+(event.offset||0),pan:event.pan??(state.point.x-.5)*.5});
    if(visualLoop.looping&&event.kind==='bell'){const matches=[...visualLoop.points.values()].filter(p=>p.midi===event.midi),point=matches[songStep%Math.max(1,matches.length)];if(point)loopHighlights.push({id:point.id,start:time+(nextSongTime-audio.currentTime)*1000,end:time+(nextSongTime-audio.currentTime)*1000+180})}
   }
 
   songStep++;nextSongTime+=interval;
  }
- if(trigger){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',freq:440*2**((currentPitch-69)/12),level:.16+state.level*.1+song.build*.045,duration:1.2+Math.random()*1.6,noise:.12+ +$('breath').value/600,pan:(state.point.x-.5)*1.2});
-  if(Math.random()<.06)instrument(master).port.postMessage({type:'grain',time:audio.currentTime+60/+$('pulse').value*(.25+Math.floor(Math.random()*3)*.25),length:.025+Math.random()*.045,offset:.07+Math.random()*.25,rate:Math.random()<.3?-1:1,level:.1,pan:Math.random()*.8-.4});
-  for(const event of song.embellish(currentPitch,55))instrument(master).port.postMessage({...event,kind:'bell',duration:1.8,freq:440*2**((event.midi-69)/12),time:audio.currentTime+event.offset});
+ if(trigger){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.16+state.level*.1+song.build*.045,duration:1.2+Math.random()*1.6,noise:.12+ +$('breath').value/600,pan:(state.point.x-.5)*1.2});
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
