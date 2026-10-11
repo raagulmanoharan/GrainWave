@@ -287,3 +287,15 @@ body[data-mode=camera] #loop-flow{display:none}
 #loop-tools button{color:var(--selected-loop-color);border-color:color-mix(in srgb,var(--selected-loop-color) 45%,transparent);background:color-mix(in srgb,var(--selected-loop-color) 12%,#080808)}
 #loop-link{position:absolute;z-index:5;left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:1px;background:color-mix(in srgb,var(--selected-loop-color) 20%,transparent);pointer-events:none}
 body[data-mode=camera] #loop-link{display:none}
+
+/* Primary colors identify loops through text, hairlines and progress only. */
+.loop-block,.loop-block.selected,#loop-tools button,#loop-tools #play{background:transparent}
+.loop-block{color:var(--loop-color)}
+.loop-block.selected{border-color:var(--loop-color)}
+.loop-block.paused{color:var(--loop-color);opacity:.5}
+#loop-tools button,#loop-tools #play{color:var(--selected-loop-color)}
+#live-layer{font-size:26px}
+#loop-flow{font-size:12px;line-height:1.45;white-space:pre-line;color:#ffffffd9}
+#status{font-size:12px;line-height:1.45;color:#ffffffd9}
+
+#loop-progress{stroke:var(--selected-loop-color,#ff453a)}
