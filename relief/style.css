@@ -151,17 +151,3 @@ body[data-mode=playing] .relief-carousel{display:none}
 .settings-group p{font:500 16px/1.4 ReliefCondensed,Arial,sans-serif;color:#999;letter-spacing:.2px}
 .settings-group .model-name{font:600 15px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:2px}
 .settings-group select{font:500 19px ReliefCondensed,Arial,sans-serif}
-
-@font-face{font-family:ReliefSharpPixel;src:url('fonts/Silkscreen-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
-.relief-carousel{font:400 18px/1 ReliefSharpPixel,monospace;letter-spacing:0}
-#settings-panel{font-family:ReliefSharpPixel,monospace}
-.settings-top{font:400 11px/1.3 ReliefSharpPixel,monospace;letter-spacing:0}
-.settings-top button{width:44px;height:44px;border:1px solid #ffffffa6;border-radius:50%;background:#09090955;padding:0;display:grid;place-items:center;flex:none}
-.settings-top button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5}
-#settings-title{font:400 clamp(27px,8.5vw,48px)/1.1 ReliefSharpPixel,monospace;letter-spacing:-1px;margin:32px 0;text-transform:uppercase}
-.settings-group h2{font:400 20px/1.2 ReliefSharpPixel,monospace;letter-spacing:-.5px}
-.settings-group label{font:400 12px/1.7 ReliefSharpPixel,monospace;letter-spacing:-.2px}
-.settings-group output{font:400 12px/1.7 ReliefSharpPixel,monospace}
-.settings-group p{font:400 10px/1.9 ReliefSharpPixel,monospace;letter-spacing:0}
-.settings-group .model-name{font:400 11px/1.4 ReliefSharpPixel,monospace;letter-spacing:0}
-.settings-group select{font:400 11px/1.5 ReliefSharpPixel,monospace}
