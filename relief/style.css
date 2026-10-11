@@ -299,3 +299,5 @@ body[data-mode=camera] #loop-link{display:none}
 #status{font-size:12px;line-height:1.45;color:#ffffffd9}
 
 #loop-progress{stroke:var(--selected-loop-color,#ff453a)}
+
+.gesture-guide{display:none}
