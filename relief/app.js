@@ -1,3 +1,4 @@
+import {Onboarding} from './onboarding.js?v=tour-1';
 import {GrainProcessor} from './grain-process.js?v=fine-1';
 import {AmbientBed} from './ambient.js?v=fine-1';
 let ambientBed=null;
@@ -174,5 +175,6 @@ $('distortion').oninput=updateDistortion;updateDistortion();
 
 // The opening canvas is the start control; instrument controls appear after entry.
 canvas.setAttribute('role','button');canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','Tap to start Relief');
-canvas.addEventListener('click',async()=>{if(playing||audioStarting)return;if(!stream)await startCamera();if(stream)$('play').click()});
+const onboarding=new Onboarding({onOpen:()=>{landingType.setPlaying(true);status('')},onFinish:async()=>{if(!stream)await startCamera();if(!stream){$('tour-copy').textContent='Allow camera access in your browser, then tap GO to try again.';return false}await $('play').onclick();return playing}});
+canvas.addEventListener('click',async()=>{if(playing||audioStarting||onboarding.active)return;if(!onboarding.seen){onboarding.open();return}if(!stream)await startCamera();if(stream)$('play').click()});
 canvas.addEventListener('keydown',e=>{if(!playing&&(e.key==='Enter'||e.key===' ')){e.preventDefault();canvas.click()}});

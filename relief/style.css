@@ -304,3 +304,20 @@ body[data-mode=camera] #loop-link{display:none}
 
 /* Shared cell boundaries are drawn once. */
 #loop-tools button,#loop-tools #play,#loop-stack .loop-block{border-bottom-width:0}
+
+/* A quiet 50/50 editorial introduction, held by the existing grid. */
+#onboarding{position:absolute;inset:0;z-index:8;pointer-events:none}
+.tour-middle{position:absolute;left:var(--frame-left);right:var(--frame-right);top:calc(var(--frame-top) + var(--grid-cell));bottom:calc(var(--frame-bottom) + var(--grid-cell));display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr);border-top:1px solid #ffffff24;border-bottom:1px solid #ffffff24;pointer-events:auto;background:#080808}
+#tour-image{background-image:url('onboarding/scenes.png');background-size:300% 100%;background-repeat:no-repeat;background-position:0% center}
+.tour-text{background:#e9e7df;color:#171715;padding:clamp(18px,5vw,30px);display:flex;flex-direction:column;justify-content:center;gap:18px;overflow:auto}
+#tour-title{font:600 clamp(32px,9vw,52px)/.95 ReliefCondensed,Arial,sans-serif;letter-spacing:-.9px;white-space:pre-line;margin:0;outline:none}
+#tour-copy{font:400 clamp(14px,3.8vw,18px)/1.45 Arial,sans-serif;letter-spacing:-.2px;margin:0;max-width:36ch}
+#tour-back,#tour-next{position:absolute;bottom:var(--frame-bottom);width:var(--grid-cell);height:var(--grid-cell);display:grid;place-items:center;pointer-events:auto;border:1px solid #ffffff30;border-radius:0;font:400 26px/1 ReliefPixel,monospace;padding:0}
+#tour-back{left:var(--frame-left);background:#090909;color:#fff}
+#tour-next{right:var(--frame-right);background:#fff;color:#090909}
+#tour-back:disabled{opacity:.25}
+.tour-footer{position:absolute;bottom:var(--frame-bottom);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:var(--grid-cell);display:flex;align-items:center;justify-content:center;gap:16px;font:400 11px/1 ReliefPixel,monospace;color:#ffffffa0;pointer-events:auto}
+#tour-skip{font:inherit;color:#ffffff80;padding:10px 0;text-decoration:underline;text-underline-offset:3px}
+body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camera,body[data-onboarding=true] #capture-loop,body[data-onboarding=true] #live-layer,body[data-onboarding=true] #loop-stack,body[data-onboarding=true] #loop-tools,body[data-onboarding=true] #status,body[data-onboarding=true] .camera-fallback,body[data-onboarding=true] #landing-type,body[data-onboarding=true] #loop-flow{visibility:hidden}
+@media(max-height:650px){.tour-text{padding:16px;gap:12px}#tour-title{font-size:28px}#tour-copy{font-size:13px;line-height:1.35}}
+@media(min-width:700px){.tour-text{padding:3vh 8vw}#tour-title{font-size:clamp(38px,5vw,64px)}#tour-copy{font-size:18px;max-width:44ch}}
