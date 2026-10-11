@@ -370,3 +370,5 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 .settings-about figcaption{inset:0;padding:12px;display:flex;align-items:center;justify-content:center;text-align:center;background:#00000018;color:#ff453a;font:italic 600 clamp(30px,9vw,46px)/.88 ReliefSerif,Georgia,serif;letter-spacing:-1.5px;white-space:pre-line}
 .settings-about p{font:400 12px/1.6 Arial,"Helvetica Neue",sans-serif;text-align:center;letter-spacing:-.1px}
 #settings-panel{--grid-cell:clamp(56px,16vw,80px)}
+
+.settings-about canvas{image-rendering:auto}
