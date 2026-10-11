@@ -323,3 +323,5 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 @media(min-width:700px){.tour-text{padding:3vh 8vw}#tour-title{font-size:clamp(38px,5vw,64px)}#tour-copy{font-size:18px;max-width:44ch}}
 
 #tour-close{position:absolute;top:var(--frame-top);right:var(--frame-right);width:var(--grid-cell);height:var(--grid-cell);display:grid;place-items:center;pointer-events:auto;border:1px solid #ffffff30;border-radius:0;background:#090909;color:#fff;font:400 26px/1 ReliefPixel,monospace;padding:0}
+
+#tour-image{overflow:hidden;background:#070a0e}#tour-image canvas{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated}
