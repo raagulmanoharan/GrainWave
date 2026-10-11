@@ -1,8 +1,8 @@
-import {AmbientBed} from './ambient.js?v=ambient-2';
+import {AmbientBed} from './ambient.js?v=menu-1';
 let ambientBed=null;
-import {LandingType} from './landing-type.js?v=ambient-2';
+import {LandingType} from './landing-type.js?v=menu-1';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=ambient-2';
+import {drawPosterPaths} from './poster-paths.js?v=menu-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';

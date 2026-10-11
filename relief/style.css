@@ -111,3 +111,28 @@ body[data-mode=camera] #cloud{cursor:pointer}
 @keyframes relief-scroll{to{transform:translateX(-100%)}}
 body[data-mode=playing] .relief-carousel{display:none}
 @media(prefers-reduced-motion:reduce){.relief-carousel>div{animation:none}}
+/* Black instrument menu: pixel type, square controls and hairline rules. */
+.relief-carousel{font-family:ReliefPixel,monospace;font-size:18px;letter-spacing:0}
+#settings-panel{background:#050505;color:#f5f5f5;border:0;border-radius:0;box-shadow:none;padding:calc(env(safe-area-inset-top,0px) + 22px) 22px calc(env(safe-area-inset-bottom,0px) + 32px);font-family:ReliefTerminal,monospace}
+#settings-panel::backdrop{background:#000}
+.settings-top{font:18px/1 ReliefPixel,monospace;letter-spacing:0;border-bottom:1px solid #ffffff40;padding-bottom:18px}
+.settings-top button{border:1px solid #ffffff60;border-radius:0;background:none;color:#fff;width:40px;height:40px;font:28px/1 ReliefTerminal,monospace}
+#settings-title{font:400 clamp(36px,10vw,64px)/.95 ReliefPixel,monospace;letter-spacing:-1px;margin:32px 0}
+.settings-grid{gap:0}
+.settings-group,.settings-group:nth-child(2),.settings-group:nth-child(3){background:none;border-radius:0;border:0;border-top:1px solid #ffffff40;padding:24px 0}
+.settings-group h2{font:400 26px/1 ReliefPixel,monospace;letter-spacing:0;text-transform:uppercase;margin:0 0 28px}
+.settings-group h2::before{content:'+ ';color:#8e8e8e}
+.settings-group label{font:22px/1.1 ReliefTerminal,monospace;margin:24px 0}
+.settings-group output{font:20px/1 ReliefTerminal,monospace;color:#fff}
+.settings-group p{font:18px/1.35 ReliefTerminal,monospace;color:#969696;max-width:48ch}
+.settings-group .model-name{font:18px/1 ReliefPixel,monospace;letter-spacing:0;color:#fff;margin:0 0 28px}
+.settings-group input[type=range]{appearance:none;-webkit-appearance:none;height:32px;background:transparent;accent-color:#fff;margin-top:8px;cursor:ew-resize}
+.settings-group input[type=range]::-webkit-slider-runnable-track{height:1px;background:#ffffff70}
+.settings-group input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:12px;height:18px;margin-top:-8px;border:1px solid #fff;border-radius:0;background:#050505}
+.settings-group input[type=range]::-moz-range-track{height:1px;background:#ffffff70}
+.settings-group input[type=range]::-moz-range-thumb{width:12px;height:18px;border:1px solid #fff;border-radius:0;background:#050505}
+.settings-group input[type=checkbox]{appearance:none;width:20px;height:20px;border:1px solid #ffffff90;border-radius:0;background:none;display:grid;place-items:center}
+.settings-group input[type=checkbox]:checked::after{content:'';width:10px;height:10px;background:#fff}
+.settings-group select{font:20px ReliefTerminal,monospace;color:#fff;color-scheme:dark;border:1px solid #ffffff60;padding:12px;background:#050505;border-radius:0}
+#settings-panel :focus-visible{outline:1px solid #fff;outline-offset:5px}
+@media(min-width:800px){#settings-panel{padding-left:5vw;padding-right:5vw}.settings-grid{gap:32px}}
