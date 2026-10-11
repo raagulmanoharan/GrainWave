@@ -52,6 +52,7 @@ const degrees=[0,3,5,7,10];
 export const degreePitch=d=>57+12*Math.floor(d/5)+degrees[((d%5)+5)%5];
 export class PhraseSong {
  constructor(random=Math.random){
+  this.random=random;this.lastMutation=-1;
   const choose=a=>a[Math.floor(random()*a.length)];
   const a=choose([[0,2,3,2],[0,1,2,1],[2,3,4,3]]),b=choose([[1,2,1,0],[3,2,1,2],[2,4,3,2]]);
   this.phrase=[...a,...a.slice(0,3),1,...b,2,1,1,0];
@@ -78,7 +79,19 @@ export class PhraseSong {
   const voices=this.build>.7?[0,2,4,5]:this.build>.48?[0,2,4]:[0];
   return voices.map((d,i)=>({type:'tone',kind:'pulse',role:'backing',midi:d?degreePitch(degree+d):midi,offset:interval*(i+1),duration:.12+i*.015,level:(.028+this.build*.027)*(1-i*.14),noise:.1,pan:(i%2?1:-1)*.25}));
  }
+ mutate(step){
+  if(!this.seeded||step<32||step%32!==0||step===this.lastMutation)return;
+  this.lastMutation=step;
+  const candidates=[1,2,5,6,9,10,12,13],start=Math.floor(this.random()*candidates.length);
+  for(let n=0;n<2;n++){
+   const index=candidates[(start+n*3)%candidates.length],old=this.phrase[index];
+   const options=[old-1,old+1].filter(d=>d>=0&&d<=5&&Math.abs(d-this.phrase[index-1])<=3&&Math.abs(d-this.phrase[index+1])<=3);
+   if(options.length)this.phrase[index]=options[Math.floor(this.random()*options.length)];
+  }
+  this.phrase[15]=0; // Keep the cadence, and most of the motif, recognizable.
+ }
  events(step,energy,{loop=false,bpm=172}={}){
+  this.mutate(step);
   const i=step%16,bar=Math.floor(step/16)%4,events=[],b=this.build;
   const hit=(kind,level,duration,offset=0)=>events.push({type:'percussion',kind,freq:kind==='kick'?52:kind==='snare'?185:6500,level,duration,offset,role:'drums'});
   // The clock never disappears. Activity opens the break without changing its timing.

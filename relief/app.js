@@ -1,9 +1,9 @@
-import {GrainProcessor} from './grain-process.js';
-import {AmbientBed} from './ambient.js?v=smooth-1';
+import {GrainProcessor} from './grain-process.js?v=fine-1';
+import {AmbientBed} from './ambient.js?v=fine-1';
 let ambientBed=null;
-import {LandingType} from './landing-type.js?v=smooth-1';
+import {LandingType} from './landing-type.js?v=fine-1';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=smooth-1';
+import {drawPosterPaths} from './poster-paths.js?v=fine-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
@@ -12,7 +12,7 @@ import {SceneMemory} from './scene-memory.js?v=splice-1';
 const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
 import {MotionEcho} from './motion-echo.js?v=drive-1';
 import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
-import {PhraseSong as MotifSong} from './phrase.js?v=build-1';
+import {PhraseSong as MotifSong} from './phrase.js?v=evolve-1';
 let song=new MotifSong();
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=still-2';
@@ -126,10 +126,10 @@ function drawTracked(w,h){
 
 const grainInput=document.createElement('canvas'),grainInputContext=grainInput.getContext('2d',{willReadFrequently:true}),grainFallback=new GrainProcessor();let grainWorker=null,grainBusy=false;
 function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
-try{grainWorker=new Worker('grain-worker.js?v=smooth-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
+try{grainWorker=new Worker('grain-worker.js?v=fine-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
 function drawGrain(w,h,time){
  if(!grainBusy&&(time-lastGrain>=33||!grainData)){
-  const width=Math.max(1,Math.floor(Math.min(420,Math.sqrt(180000*w/h)))),height=Math.max(1,Math.round(width*h/w));
+  const width=Math.max(1,Math.floor(Math.min(960,w*Math.min(devicePixelRatio,2),Math.sqrt(1200000*w/h)))),height=Math.max(1,Math.round(width*h/w));
   if(grainInput.width!==width||grainInput.height!==height){grainInput.width=width;grainInput.height=height}
   drawCamera(grainInputContext,width,height);const data=grainInputContext.getImageData(0,0,width,height).data;
   const frame={data,width,height,drive:+$('distortion').value/100,settled:playing?idleTexture(time,expression.lastMotion):0,threshold,playing,boxes:motionSources.map(p=>p.box).filter(Boolean),generation:cameraGeneration};
