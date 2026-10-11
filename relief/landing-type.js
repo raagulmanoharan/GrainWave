@@ -3,7 +3,7 @@ export class LandingType{
  constructor(){this.canvas=document.getElementById('landing-type');this.ctx=this.canvas.getContext('2d');this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.open=true;this.start=performance.now();this.ready=false;this.frame=null;this.edges=[];
   for(let lat=-3;lat<=3;lat++){for(let j=0;j<48;j++)this.edges.push([this.point(lat*Math.PI/8,j*Math.PI/24),this.point(lat*Math.PI/8,(j+1)*Math.PI/24)])}
   for(let lon=0;lon<12;lon++){for(let j=0;j<32;j++)this.edges.push([this.point(-Math.PI/2+j*Math.PI/32,lon*Math.PI/6),this.point(-Math.PI/2+(j+1)*Math.PI/32,lon*Math.PI/6)])}
-  document.fonts.load('100px ReliefPixel').then(()=>{this.ready=true;this.start=performance.now();this.tick()});window.addEventListener('resize',()=>this.resize());this.resize()}
+  document.fonts.load('100px ReliefTerminal').then(()=>{this.ready=true;this.start=performance.now();this.tick()});window.addEventListener('resize',()=>this.resize());this.resize()}
  point(lat,lon){return [Math.cos(lat)*Math.cos(lon),Math.sin(lat),Math.cos(lat)*Math.sin(lon)]}
  resize(){this.w=innerWidth;this.h=innerHeight;this.d=Math.min(devicePixelRatio,2);this.canvas.width=this.w*this.d;this.canvas.height=this.h*this.d}
  setPlaying(playing){this.open=!playing;this.start=performance.now();this.canvas.hidden=false;if(this.ready&&!this.frame)this.tick()}
@@ -15,7 +15,7 @@ export class LandingType{
   this.edges.forEach(([a,b],i)=>{const u=project(a,i),v=project(b,i);ctx.globalAlpha=(u.z+v.z>0?.5:.2)*(this.open?Math.min(1,p*3):1-p);ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(v.x,v.y);if(burst>.06){const length=1+burst*2;ctx.lineTo(w/2+(v.x-w/2)*length,h/2+(v.y-h/2)*length)}ctx.stroke()});
   ctx.globalAlpha=this.open?Math.min(1,p*3):Math.max(0,1-p*1.5);
   // Stretch real bitmap-serif glyphs by their visible bounds, preserving crisp pixels.
-  ctx.font='400 100px ReliefPixel';ctx.textBaseline='alphabetic';const text='RELIEF',m=ctx.measureText(text),inkHeight=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent,targetW=w*.88,targetH=h*.38;
+  ctx.font='400 100px ReliefTerminal';ctx.textBaseline='alphabetic';const text='RELIEF',m=ctx.measureText(text),inkHeight=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent,targetW=w*.94,targetH=h*.8;
   ctx.save();ctx.translate((w-targetW)/2,(h-targetH)/2);ctx.scale(targetW/(m.actualBoundingBoxLeft+m.actualBoundingBoxRight),targetH/inkHeight);ctx.fillStyle='#fff';ctx.fillText(text,m.actualBoundingBoxLeft,m.actualBoundingBoxAscent);ctx.restore();
   ctx.globalAlpha=1;if(this.open||p<1)this.frame=requestAnimationFrame(this.tick)
  }
