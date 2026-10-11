@@ -7,7 +7,7 @@ export class LandingType{
  point(lat,lon){return [Math.cos(lat)*Math.cos(lon),Math.sin(lat),Math.cos(lat)*Math.sin(lon)]}
  resize(){const bounds=this.canvas.getBoundingClientRect();this.w=bounds.width;this.h=bounds.height;this.d=Math.min(devicePixelRatio,2);this.canvas.width=this.w*this.d;this.canvas.height=this.h*this.d}
  buildTitle(){const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');ctx.font='600 100px ReliefSerif';const m=ctx.measureText('RELIEF'),scale=.42;canvas.width=Math.ceil((m.actualBoundingBoxLeft+m.actualBoundingBoxRight)*scale)+2;canvas.height=Math.ceil((m.actualBoundingBoxAscent+m.actualBoundingBoxDescent)*scale)+2;ctx.scale(scale,scale);ctx.font='600 100px ReliefSerif';ctx.fillStyle='#fff';ctx.fillText('RELIEF',m.actualBoundingBoxLeft+1/scale,m.actualBoundingBoxAscent+1/scale);const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);for(let i=3;i<pixels.data.length;i+=4)pixels.data[i]=pixels.data[i]>100?255:0;ctx.putImageData(pixels,0,0);this.title=canvas}
- setPlaying(playing){this.open=!playing;this.start=performance.now();this.canvas.hidden=false;if(this.ready&&!this.frame)this.tick()}
+ setPlaying(playing){if(this.open===!playing)return;this.open=!playing;this.start=performance.now();this.canvas.hidden=false;if(this.ready&&!this.frame)this.tick()}
  tick=()=>{this.frame=null;const now=performance.now(),p=Math.min(1,(now-this.start)/(this.reduced?1:950)),{ctx,w,h,d}=this;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
   if(!this.open&&p===1){this.canvas.hidden=true;return}
   const angle=this.reduced?0:now*.00015,radius=Math.min(w*.46,h*.27),burst=this.open?0:p*p;

@@ -10,6 +10,7 @@ export class NoteBuffer {
   this.duration=Math.max(85,time-first,this.locked.at(-1).offset+85);
   this.index=0;this.origin=time;return true;
  }
+ progress(time){return this.locked?((Math.max(0,time-this.origin)%this.duration)/this.duration):0}
  due(until){
   if(!this.locked)return [];
   const result=[];

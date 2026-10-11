@@ -172,3 +172,11 @@ body[data-mode=camera] #capture-loop{display:none}
 #capture-loop .icon-loop{display:none}
 #capture-loop[aria-pressed=true] .icon-magic{display:none}
 #capture-loop[aria-pressed=true] .icon-loop{display:block}
+
+#play .icon-plus{display:none}
+#play.layer-ready .icon-play{display:none}
+#play.layer-ready .icon-plus{display:block}
+#capture-loop .loop-ring{position:absolute;inset:-1px;width:64px;height:64px;fill:none;stroke:none;transform:rotate(-90deg);pointer-events:none;display:none}
+#capture-loop[aria-pressed=true] .loop-ring{display:block}
+.loop-ring .loop-ring-track{stroke:#ff792c30;stroke-width:2}
+#loop-progress{stroke:#ff792c;stroke-width:2;stroke-linecap:butt;fill:none}

@@ -1,7 +1,7 @@
 import {GrainProcessor} from './grain-process.js?v=fine-1';
 import {AmbientBed} from './ambient.js?v=fine-1';
 let ambientBed=null;
-import {LandingType} from './landing-type.js?v=timed-2';
+import {LandingType} from './landing-type.js?v=ring-1';
 const landingType=new LandingType();
 import {drawPosterPaths} from './poster-paths.js?v=fine-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
@@ -13,7 +13,9 @@ const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
 import {MotionEcho} from './motion-echo.js?v=drive-1';
 import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
-import {NoteBuffer} from './note-buffer.js?v=timed-2';
+import {complementaryPitch} from './layer-harmony.js?v=ring-1';
+let lastLayerPitch=null;
+import {NoteBuffer} from './note-buffer.js?v=ring-1';
 const noteBuffer=new NoteBuffer();
 let song=new MotifSong(Math.random,{generative:true});
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
@@ -71,9 +73,12 @@ async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.web
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{numberOfOutputs:2,outputChannelCount:[2,2]});output.instrument.connect(output,0);output.instrument.connect(delay,1);output.instrument.connect(reverbWet.inputNode,1)}return output.instrument}
 function perform(time){
  ambientBed?.advance();
+ $('loop-progress').style.strokeDashoffset=100*(1-noteBuffer.progress(time));
  const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
- const phrasePitch=state.note&&liveRunning?song.trigger(state.point.y,time):null;const trigger=phrasePitch!==null;
+ const generatedPitch=state.note&&liveRunning?song.trigger(state.point.y,time):null;
+ const phrasePitch=generatedPitch===null?null:complementaryPitch(generatedPitch,noteBuffer.locked,time,noteBuffer.origin,noteBuffer.duration,lastLayerPitch);
+ if(phrasePitch!==null&&noteBuffer.locked)lastLayerPitch=phrasePitch;const trigger=phrasePitch!==null;
  if(trigger){visualLoop.movement(time,true);if(!noteBuffer.locked)loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:phrasePitch,velocity:state.level,point};const note=candidate;noteBuffer.record({...note,time});syncLoopButton();currentPitch=note.midi;visibleNotes=[note,null,null];visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});visibleTick++;lastLiveTime=time;}
  if(audio.currentTime-nextSongTime>.2)nextSongTime=audio.currentTime;
  visualLoop.looping=Boolean(noteBuffer.locked);
@@ -95,10 +100,10 @@ function perform(time){
  }
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
 }
-function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',liveRunning);$('play').setAttribute('aria-label',liveRunning?'Pause live generation':noteBuffer.locked?'Layer live generation over loop':'Start the live instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
+function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',liveRunning);$('play').classList.toggle('layer-ready',Boolean(noteBuffer.locked)&&!liveRunning);$('play').setAttribute('aria-label',liveRunning?'Pause live generation':noteBuffer.locked?'Layer live generation over loop':'Start the live instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
 function stop(){noteBuffer.locked=null;syncLoopButton();ambientBed?.stop();visualLoop.reset(performance.now());loopHighlights=[];accent=null;motionEcho.reset();playing=false;liveRunning=false;song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=0;lastPercussion=-Infinity;percussionStep=0;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
 function syncLoopButton(){const b=$('capture-loop');b.disabled=!noteBuffer.notes.length;b.setAttribute('aria-pressed',String(Boolean(noteBuffer.locked)));b.setAttribute('aria-label',noteBuffer.locked?'Release loop and return to live motion':'Loop the last 16 notes')}
-$('capture-loop').onclick=()=>{const locked=noteBuffer.toggle(performance.now());liveRunning=!locked;visualLoop.looping=locked;expression.reset();loopHighlights=[];syncLoopButton();syncPreview()};
+$('capture-loop').onclick=()=>{const locked=noteBuffer.toggle(performance.now());lastLayerPitch=null;liveRunning=!locked;visualLoop.looping=locked;expression.reset();loopHighlights=[];syncLoopButton();syncPreview()};
 $('play').onclick=async()=>{if(playing){if(noteBuffer.locked){liveRunning=!liveRunning;expression.reset();syncPreview()}else stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;visualLoop.reset(performance.now());loopHighlights=[];song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=audio.currentTime;playing=true;liveRunning=true;ambientBed.start();master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
 $('threshold').oninput=()=>updateThreshold(+$('threshold').value/100);
 $('scale').onchange=()=>{mergeTracking(performance.now())};
