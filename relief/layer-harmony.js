@@ -6,7 +6,7 @@ export function complementaryPitch(midi,locked,time,origin,duration,previous=nul
  const highest=Math.max(...locked.map(n=>n.midi));
  const phase=((time-origin)%duration+duration)%duration;
  const sounding=locked.filter(n=>((phase-n.offset+duration)%duration)<1800).map(n=>n.midi);
- const candidates=[];for(let p=highest+2;p<=highest+14;p++)if(pcs.includes(pitchClass(p)))candidates.push(p);
+ const candidates=[];for(let p=Math.min(96,highest+2);p<=Math.min(108,highest+14);p++)if(pcs.includes(pitchClass(p)))candidates.push(p);
  const different=candidates.filter(p=>!sounding.some(n=>pitchClass(n)===pitchClass(p)));
  const choices=different.length?different:candidates;
  const target=midi+12;

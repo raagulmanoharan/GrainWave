@@ -242,3 +242,13 @@ body[data-mode=camera] #open-settings,body[data-mode=camera] #flip-camera,body[d
 
 /* Edge-aligned cells, with only device safe-area clearance. */
 .stage{--frame-left:env(safe-area-inset-left,0px);--frame-right:env(safe-area-inset-right,0px);--frame-top:env(safe-area-inset-top,0px);--frame-bottom:env(safe-area-inset-bottom,0px)}
+
+#loop-stack{position:absolute;z-index:6;left:var(--frame-left);bottom:calc(var(--frame-bottom) + var(--grid-cell));display:flex;flex-direction:column-reverse;width:var(--grid-cell)}
+.loop-block,#loop-tools button,#live-layer{width:var(--grid-cell);height:var(--grid-cell);position:relative;border:1px solid #ffffff25;border-radius:0;background:#080808b8;color:#fff;font:500 22px/1 ReliefCondensed,Arial,sans-serif;display:grid;place-items:center}
+.loop-block.selected{border-color:#ff792c;color:#ff792c}.loop-block.paused{color:#ffffff50}
+.loop-block i{position:absolute;bottom:0;left:0;height:1px;width:var(--phase,0%);background:#ff792c;pointer-events:none}
+#loop-tools{position:absolute;z-index:6;right:var(--frame-right);bottom:calc(var(--frame-bottom) + var(--grid-cell));display:flex;flex-direction:column}
+#loop-tools small{position:absolute;bottom:5px;font-size:10px;opacity:.6}
+#live-layer{position:absolute;z-index:6;right:var(--frame-right);bottom:calc(var(--frame-bottom) + var(--grid-cell));font-size:30px}
+body:has(#loop-tools:not([hidden])) #live-layer{bottom:calc(var(--frame-bottom) + var(--grid-cell)*5)}
+body[data-mode=camera] #loop-stack,body[data-mode=camera] #loop-tools,body[data-mode=camera] #live-layer{display:none}
