@@ -1,7 +1,7 @@
 import {motionFlow,advectDepth} from './motion-depth.js?v=mosh-1';
 const vertex=`#version 300 es
 precision highp float;
-uniform sampler2D uImage,uMap,uFlow;uniform float uAspect;uniform vec2 uGrid;uniform float uDepth,uTime;uniform vec2 uSize;
+uniform sampler2D uImage,uMap,uFlow;uniform float uAspect;uniform vec2 uGrid;uniform float uDepth,uTime;uniform vec2 uSize;uniform vec4 uRegions[12];uniform int uRegionCount;
 out vec2 vFace;out vec3 vColor;out float vLight,vHeight,vNoise,vKeep;
 float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 void main(){
@@ -13,9 +13,12 @@ void main(){
  // Select local contrast, not absolute brightness: dark birds survive against sky.
  vec2 pixel=2./uSize;float center=luma(texture(uImage,uv).rgb);
  float contrast=max(max(abs(center-luma(texture(uImage,uv+vec2(pixel.x,0)).rgb)),abs(center-luma(texture(uImage,uv-vec2(pixel.x,0)).rgb))),max(abs(center-luma(texture(uImage,uv+vec2(0,pixel.y)).rgb)),abs(center-luma(texture(uImage,uv-vec2(0,pixel.y)).rgb))));
- vKeep=(contrast>.14||(flow.b>.12&&contrast>.045))?1.:0.;
- float field=texture(uMap,uv).r;
  float noise=fract(sin(float(column)*17.1+float(row)*3.71)*43758.5453);
+ float movingRegion=0.;for(int i=0;i<12;i++){if(i>=uRegionCount)break;vec4 b=uRegions[i];if(uv.x>=b.x&&uv.y>=b.y&&uv.x<=b.x+b.z&&uv.y<=b.y+b.w)movingRegion=1.;}
+ // Quiet context; confirmed moving subjects remain readable, even with weak edges.
+ vKeep=movingRegion>0.?1.:(contrast>.24&&noise<.035?1.:0.);
+ float field=texture(uMap,uv).r;
+
  // Relative inverse depth: nearby samples have a larger value.
  float z=2.0+(1.-field)*1.15;
  vec3 point=vec3((uv.x-.5)*2.*uAspect*z/2.8,(.5-uv.y)*2.*z/2.8,z);
@@ -54,7 +57,7 @@ export class DepthCloud {
   if(!gl){this.failed=true;onStatus('Depth visual unavailable · showing camera');return}
   const compile=(type,source)=>{const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader};
   const program=this.program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);gl.bindVertexArray(gl.createVertexArray());gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
-  this.uniforms=Object.fromEntries(['uImage','uMap','uFlow','uGrid','uDepth','uTime','uSize','uAspect'].map(n=>[n,gl.getUniformLocation(program,n)]));
+  this.uniforms=Object.fromEntries(['uImage','uMap','uFlow','uGrid','uDepth','uTime','uSize','uAspect','uRegions[0]','uRegionCount'].map(n=>[n,gl.getUniformLocation(program,n)]));
   this.textures=[0,1,2].map(i=>{gl.activeTexture(gl.TEXTURE0+i);const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);for(const [key,value] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,key,value);return texture});gl.uniform1i(this.uniforms.uImage,0);gl.uniform1i(this.uniforms.uMap,1);gl.uniform1i(this.uniforms.uFlow,2);
   this.capture=document.createElement('canvas');this.context=this.capture.getContext('2d',{willReadFrequently:true});
   this.worker=new Worker(new URL('./effect-preview/depth-worker.js?fast=1',import.meta.url),{type:'module'});
@@ -81,7 +84,7 @@ export class DepthCloud {
   this.generation++;this.busy=false;this.last=0;this.retried=true;this.onStatus('Refreshing depth · motion visual stays live');
  }
  reset(){this.generation++;this.ready=false;this.field=null;this.target=null;this.previous=null;this.history=[];this.canvas.hidden=true;}
- update(time,video,drawCamera,stretch){
+ update(time,video,drawCamera,stretch,regions=[]){
   if(!this.gl||this.failed||video.readyState<2||document.hidden)return false;
   if(this.busy&&!this.retried&&time-this.last>(this.maps?15000:60000))this.restart();
   const gl=this.gl,c=this.canvas,r=c.parentElement.getBoundingClientRect(),d=Math.min(devicePixelRatio,1.25);
@@ -107,6 +110,7 @@ export class DepthCloud {
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.textures[1]);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,fw,fh,0,gl.RED,gl.UNSIGNED_BYTE,depths);
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,this.textures[2]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,fw,fh,0,gl.RGBA,gl.UNSIGNED_BYTE,vectors);
   gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.textures[0]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,this.capture);
+  const boxes=new Float32Array(48);let count=0;for(const p of regions.slice(0,12)){const b=p.box;if(!b)continue;boxes.set([b.x-.012,b.y-.008,b.w+.024,b.h+.016],count*4);count++}gl.uniform4fv(this.uniforms['uRegions[0]'],boxes);gl.uniform1i(this.uniforms.uRegionCount,count);
   const cols=220,rows=Math.round(cols*height/width);gl.uniform2f(this.uniforms.uGrid,cols,rows);gl.uniform1f(this.uniforms.uAspect,width/height);gl.uniform1f(this.uniforms.uDepth,stretch);gl.uniform1f(this.uniforms.uTime,time*.001);gl.uniform2f(this.uniforms.uSize,this.capture.width,this.capture.height);gl.clearColor(.008,.005,.009,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);c.hidden=false;c.dataset.depthMaps=this.maps;c.dataset.motion=flow.reduce((sum,v,i)=>sum+(i%3===2?v:0),0).toFixed(2);return true;
  }
 }

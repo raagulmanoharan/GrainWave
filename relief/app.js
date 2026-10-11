@@ -1,8 +1,8 @@
 import {harmonyPitches} from './harmony.js?v=delight-1';
-import {DepthCloud} from './depth-cloud.js?v=instant-1';
+import {DepthCloud} from './depth-cloud.js?v=traffic-2';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
-import {MotionTracker} from './motion.js?v=instant-1';
-import {MotionExpression} from './expression.js?v=instant-1';
+import {MotionTracker} from './motion.js?v=traffic-2';
+import {MotionExpression} from './expression.js?v=traffic-2';
 import {pitch} from './music.js';
 import {PointTracker} from './tracking.js';
 const expression=new MotionExpression();
@@ -39,9 +39,9 @@ function initHands(){if(handWorker)return;handWorker=new Worker('hand-worker.js'
 async function sampleHands(){const now=performance.now();if(!handReady||handBusy||video.readyState<2||now-lastHandRequest<33)return;handBusy=true;lastHandRequest=now;const generation=cameraGeneration;try{handCanvas.width=320;handCanvas.height=Math.round(320*canvas.clientHeight/canvas.clientWidth);drawCamera(hc,handCanvas.width,handCanvas.height);const image=await createImageBitmap(handCanvas);if(generation!==cameraGeneration){image.close();handBusy=false;return}handWorker.postMessage({type:'frame',image,time:performance.now(),generation},[image])}catch(e){handBusy=false}}
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
 function receiveMotion(d){if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];motionTracker.cameraUncertain=true;return}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=instant-1',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null}}
+function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=traffic-2',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null}}
 function sampleVideo(){if(video.readyState<2)return;
- const time=performance.now();if(!motionBusy){motionCanvas.width=224;motionCanvas.height=Math.round(224*canvas.clientHeight/canvas.clientWidth);drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;
+ const time=performance.now();if(!motionBusy){motionCanvas.id='motion-analysis';motionCanvas.width=320;motionCanvas.height=Math.round(320*canvas.clientHeight/canvas.clientWidth);drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}
  else{const sources=motionTracker.update(data,motionCanvas.width,motionCanvas.height,time,noteBudget,+$('motion-sensitivity').value/100);receiveMotion({type:'result',generation:cameraGeneration,sources,state:motionTracker.state,cameraMotion:motionTracker.cameraMotion,cameraUncertain:motionTracker.cameraUncertain})}}
  mergeTracking(time);sampleHands()}
@@ -51,7 +51,7 @@ $('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();f
 $('mirror-toggle').onchange=()=>{depthCloud.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function gradient(w,h,time){const t=reduced?0:time*.00015;ctx.fillStyle='#461329';ctx.fillRect(0,0,w,h);const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#682015');g.addColorStop(.48,'#320f20');g.addColorStop(1,'#090811');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);const ax=w*(.65+Math.sin(t)*.25),ay=h*(.23+Math.cos(t*.8)*.17),r=Math.max(w,h)*.85;const glow=ctx.createRadialGradient(ax,ay,0,ax,ay,r);glow.addColorStop(0,'#71340fb0');glow.addColorStop(.35,'#76241760');glow.addColorStop(1,'#7a241200');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);const pink=ctx.createRadialGradient(w*(.15+Math.sin(t+.8)*.15),h*.7,0,w*.1,h*.7,h*.7);pink.addColorStop(0,'#42152e40');pink.addColorStop(1,'#63214400');ctx.fillStyle=pink;ctx.fillRect(0,0,w,h)}
-function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}const cloudVisible=stream&&depthCloud.update(time,video,drawCamera,threshold);ctx.clearRect(0,0,w,h);if(!cloudVisible)gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
+function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}const cloudVisible=stream&&depthCloud.update(time,video,drawCamera,threshold,motionSources);ctx.clearRect(0,0,w,h);if(!cloudVisible)gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
 function drawNotes(w,h){
  const note=visibleNotes[0];if(!note||expression.level<.02)return;
  const x=note.point.x*w,y=note.point.y*h;ctx.strokeStyle='#fff4df66';ctx.lineWidth=.7;

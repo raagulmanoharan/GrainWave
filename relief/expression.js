@@ -6,7 +6,7 @@ export class MotionExpression {
   if(uncertain){this.history.clear();this.energy=0;return}
   let strongest=0;
   for(const p of points){const time=p.name==='object'?p.time:handTime;if(!Number.isFinite(time)||now-time>300)continue;
-   const x=p.x-cameraOffset.x,y=p.y-cameraOffset.y,old=this.history.get(p.id);if(old&&time<=old.time)continue;this.history.set(p.id,{x,y,time});
+   const x=p.x-cameraOffset.x,y=p.y-cameraOffset.y,old=this.history.get(p.id)||(p.name==='object'&&Number.isFinite(p.dx)&&Number.isFinite(p.dy)?{x:x-p.dx,y:y-p.dy,time:time-(p.interval||60)}:null);if(old&&time<=old.time)continue;this.history.set(p.id,{x,y,time});
    if(!old||time-old.time>400)continue;
    const dx=x-old.x,dy=y-old.y,travel=Math.hypot(dx,dy),dt=Math.max(.03,(time-old.time)/1000),floor=p.name==='object'?.0007:.003;
    if(travel<floor)continue;
