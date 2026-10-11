@@ -233,3 +233,9 @@ body[data-mode=playing] .margin-frame i{display:none}
 #play.playing .icon-pause,#play.layer-ready .icon-plus,#capture-loop[aria-pressed=true] .icon-loop{display:block!important}
 #capture-loop[aria-pressed=true]{color:#fff}
 #capture-loop .loop-ring{inset:0;width:100%;height:100%;z-index:2}
+
+/* Quiet drafting guides; controls appear only inside the instrument. */
+.margin-frame span{background:#ffffff24}
+.margin-frame .grid-col-left,.margin-frame .grid-col-right,.margin-frame .grid-row-top,.margin-frame .grid-row-bottom{background:#ffffff0d}
+body[data-mode=camera] .margin-frame i{display:none}
+body[data-mode=camera] #open-settings,body[data-mode=camera] #flip-camera,body[data-mode=camera] #capture-loop,body[data-mode=camera] #play{display:none}
