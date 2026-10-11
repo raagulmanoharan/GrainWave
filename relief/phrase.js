@@ -5,7 +5,7 @@ import {scales} from './music.js';
 export class PhraseComposer {
   constructor({seed=0}={}) { this.seed=Math.trunc(seed)||0; this.reset(); }
   reset() { this.index=0; this.previous=null; this.motif=[]; this.scale=null; }
-  compose(note,{scale='minor',sounding=[]}={}) {
+  compose(note,{scale='minor',sounding=[],flowing=false}={}) {
     if(!note)return null;
     const intervals=scales[scale]||scales.minor;
     const key=scales[scale]?scale:'minor';
@@ -18,7 +18,7 @@ export class PhraseComposer {
     const chord=pitches.filter(p=>[0,intervals.includes(3)?3:4,7].includes((p-69)%12));
     const y=Math.max(0,Math.min(1,note.point?.y??.5));
     const register=69+(1-y)*12;
-    const direction=-Math.sign(note.point?.gestureDirection||0);
+    const direction=-Math.sign(Math.abs(note.point?.gestureDirection||0)>.0005?note.point.gestureDirection:0)||(flowing?[1,1,-1,-1][position]:0);
     let target=this.previous===null?register:this.previous+direction*2;
     if(section!==0&&this.motif[position]!==undefined){
       target=this.motif[position];
