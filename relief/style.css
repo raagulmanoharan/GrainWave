@@ -321,3 +321,5 @@ body[data-mode=camera] #loop-link{display:none}
 body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camera,body[data-onboarding=true] #capture-loop,body[data-onboarding=true] #live-layer,body[data-onboarding=true] #loop-stack,body[data-onboarding=true] #loop-tools,body[data-onboarding=true] #status,body[data-onboarding=true] .camera-fallback,body[data-onboarding=true] #landing-type,body[data-onboarding=true] #loop-flow{visibility:hidden}
 @media(max-height:650px){.tour-text{padding:16px;gap:12px}#tour-title{font-size:28px}#tour-copy{font-size:13px;line-height:1.35}}
 @media(min-width:700px){.tour-text{padding:3vh 8vw}#tour-title{font-size:clamp(38px,5vw,64px)}#tour-copy{font-size:18px;max-width:44ch}}
+
+#tour-close{position:absolute;top:var(--frame-top);right:var(--frame-right);width:var(--grid-cell);height:var(--grid-cell);display:grid;place-items:center;pointer-events:auto;border:1px solid #ffffff30;border-radius:0;background:#090909;color:#fff;font:400 26px/1 ReliefPixel,monospace;padding:0}

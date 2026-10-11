@@ -9,6 +9,7 @@ export class Onboarding{
  document.getElementById('tour-next').onclick=()=>this.index===2?this.finish():this.show(this.index+1);
  document.getElementById('tour-back').onclick=()=>this.show(this.index-1);
  document.getElementById('tour-skip').onclick=()=>this.finish();
+ document.getElementById('tour-close').onclick=()=>this.finish();
  document.addEventListener('keydown',e=>{if(!this.active)return;if(e.key==='ArrowRight'){e.preventDefault();document.getElementById('tour-next').click()}if(e.key==='ArrowLeft'&&this.index){e.preventDefault();this.show(this.index-1)}if(e.key==='Escape')this.finish()});
  }
  open(){if(this.active)return;this.active=true;document.body.dataset.onboarding='true';this.panel.hidden=false;this.onOpen();this.show(0)}
