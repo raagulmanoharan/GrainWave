@@ -1,6 +1,6 @@
-import {LandingType} from './landing-type.js?v=type-globe-1';
+import {LandingType} from './landing-type.js?v=type-globe-2';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=type-globe-1';
+import {drawPosterPaths} from './poster-paths.js?v=type-globe-2';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
@@ -146,3 +146,8 @@ function drawLoopProgress(w,h,time){
 
 function updateDistortion(){const amount=+$('distortion').value/100;$('distortion-out').textContent=`${Math.round(amount*100)}%`;master?.instrument?.port.postMessage({type:'drive',amount});if(delayFeedback&&audio)delayFeedback.gain.setTargetAtTime(.32+amount*.16,audio.currentTime,.05);if(feedbackShaper){const curve=new Float32Array(2048);for(let i=0;i<curve.length;i++){const x=i*2/(curve.length-1)-1;curve[i]=(1-amount)*x+amount*Math.tanh(x*(1+amount*4))/(1+amount*2)}feedbackShaper.curve=curve}}
 $('distortion').oninput=updateDistortion;updateDistortion();
+
+// The opening canvas is the start control; instrument controls appear after entry.
+canvas.setAttribute('role','button');canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','Tap to start Relief');
+canvas.addEventListener('click',async()=>{if(playing||audioStarting)return;if(!stream)await startCamera();if(stream)$('play').click()});
+canvas.addEventListener('keydown',e=>{if(!playing&&(e.key==='Enter'||e.key===' ')){e.preventDefault();canvas.click()}});

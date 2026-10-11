@@ -98,3 +98,8 @@ body[data-mode=camera] .stage::after{background:rgba(0,0,0,.9)}
 .visual-instruction{height:1px}
 
 @font-face{font-family:ReliefPixelSerif;src:url('fonts/Jacquard24-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+
+.landing-description{top:calc(env(safe-area-inset-top,0px) + 26px);bottom:auto;left:50%;transform:translateX(-50%);max-width:none;white-space:nowrap;text-align:center}
+body[data-mode=camera] #play,body[data-mode=camera] #open-settings,body[data-mode=camera] #flip-camera{display:none}
+body[data-mode=camera] #cloud{cursor:pointer}
+@media(min-width:700px){.landing-description{left:50%}}
