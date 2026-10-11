@@ -307,7 +307,7 @@ body[data-mode=camera] #loop-link{display:none}
 
 /* A quiet 50/50 editorial introduction, held by the existing grid. */
 #onboarding{position:absolute;inset:0;z-index:8;pointer-events:none}
-.tour-middle{position:absolute;left:var(--frame-left);right:var(--frame-right);top:calc(var(--frame-top) + var(--grid-cell));bottom:calc(var(--frame-bottom) + var(--grid-cell));display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr);border-top:1px solid #ffffff24;border-bottom:1px solid #ffffff24;pointer-events:auto;background:#080808}
+.tour-middle{position:absolute;left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));top:calc(var(--frame-top) + var(--grid-cell));bottom:calc(var(--frame-bottom) + var(--grid-cell));display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr);border-top:1px solid #ffffff24;border-bottom:1px solid #ffffff24;pointer-events:auto;background:#080808}
 #tour-image{background-image:url('onboarding/scenes.png');background-size:300% 100%;background-repeat:no-repeat;background-position:0% center}
 .tour-text{background:#e9e7df;color:#171715;padding:clamp(18px,5vw,30px);display:flex;flex-direction:column;justify-content:center;gap:18px;overflow:auto}
 #tour-title{font:600 clamp(32px,9vw,52px)/.95 ReliefCondensed,Arial,sans-serif;letter-spacing:-.9px;white-space:pre-line;margin:0;outline:none}
@@ -325,3 +325,5 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 #tour-close{position:absolute;top:var(--frame-top);right:var(--frame-right);width:var(--grid-cell);height:var(--grid-cell);display:grid;place-items:center;pointer-events:auto;border:1px solid #ffffff30;border-radius:0;background:#090909;color:#fff;font:400 26px/1 ReliefPixel,monospace;padding:0}
 
 #tour-image{overflow:hidden;background:#070a0e}#tour-image canvas{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated}
+
+.tour-text{padding:clamp(12px,3vw,24px);gap:12px}#tour-title{font-size:clamp(25px,7vw,44px)}#tour-copy{font-size:clamp(12px,3.3vw,16px);line-height:1.4}@media(max-height:650px){.tour-text{padding:10px;gap:8px}#tour-title{font-size:22px}#tour-copy{font-size:11px;line-height:1.3}}
