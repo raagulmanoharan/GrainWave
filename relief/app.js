@@ -1,4 +1,4 @@
-import {drawPosterPaths} from './poster-paths.js?v=poster-4';
+import {drawPosterPaths} from './poster-paths.js?v=poster-5';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';

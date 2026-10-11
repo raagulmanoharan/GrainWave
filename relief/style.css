@@ -50,3 +50,16 @@ button:focus-visible{outline:2px solid #fff;outline-offset:6px}
 #open-settings,.flip-camera{background:#09090955}
 .camera-fallback{bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}.camera-fallback button{border-radius:999px;min-height:44px}
 body:has(#camera:not([hidden])) #status{top:calc(env(safe-area-inset-top,0px) + 82px);bottom:auto;right:24px}
+
+/* Oversized edition numeral sits behind the stepped red typography. */
+.poster-edition{position:fixed;inset:17% -3% auto -4%;z-index:-1;color:#080808;font:400 clamp(360px,110vw,760px)/1 ReliefPixel,monospace;letter-spacing:-.15em;white-space:nowrap;transform:scaleY(1.35);transform-origin:top left}
+body[data-mode=camera] .visual-instruction{isolation:isolate;top:20%}
+body[data-mode=camera] .stage::after{background:rgba(148,194,200,.72)}
+.landing-title{font-size:clamp(90px,30vw,180px);line-height:.95;letter-spacing:-.055em}
+.relief-name{padding:0 .16em .04em .045em}
+.landing-tagline{margin-top:18px;margin-left:12%;max-width:78%;font-size:clamp(42px,13vw,80px);line-height:.95}
+.landing-tagline em{padding:.02em .13em .12em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+@media(min-width:700px){.poster-edition{left:5%;font-size:760px}.landing-tagline{margin-left:70px;max-width:420px}}
+
+.visual-instruction .landing-tagline em{font:inherit;font-style:italic;letter-spacing:inherit;background:#ff3b2f;display:inline-block;line-height:.95;padding:.02em .13em .12em}
+.landing-tagline em:last-child{margin-left:18%;margin-top:-2px}
