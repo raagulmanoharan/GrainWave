@@ -1,16 +1,15 @@
-import {scales} from './music.js';
-// A repeating four-bar song, reshaped by motion rather than random note selection.
-export function arrangementStep(step,{scale='major',energy=.3,y=.5}={}){
- const s=scales[scale]||scales.major,bar=Math.floor(step/16)%4,i=step%16;
- const degree=[0,5,3,4][bar],note=d=>45+s[((d%s.length)+s.length)%s.length]+12*Math.floor(d/s.length),root=note(degree);
- const events=[];const tone=(midi,level,duration,kind)=>events.push({type:'tone',midi,level,duration,kind});
- if(i===0){for(const d of [degree,degree+2,degree+4,degree+6])tone(note(d)+12,.055,2.8,'pad');tone(root-12,.16,.55,'bass')}
- if(i===8)tone(root-12,.12,.4,'bass');
- if([0,6,8].includes(i))events.push({type:'percussion',kind:'kick',level:.18,freq:65});
- if(i===4||i===12)events.push({type:'percussion',kind:'snare',level:.10,freq:180});
- if(i%2===0||(energy>.6&&[7,15].includes(i)))events.push({type:'percussion',kind:'hat',level:i%4===2?.045:.025,freq:6000});
- // A stable call-and-response motif; register follows the performer's screen position.
- const slots=[2,5,10,14],motif=[[0,2,4,2],[0,4,2,1],[2,4,6,4],[4,2,1,0]],slot=slots.indexOf(i);
- if(slot>=0){const octave=y<.4?24:12;tone(note(degree+motif[bar][slot])+octave,.075+energy*.055,.65,'bell')}
+export const palette=[57,60,62,64,67,69];
+export function pulsePitch(y){return palette[Math.min(palette.length-1,Math.floor(Math.max(0,Math.min(1,1-y))*palette.length))]}
+// Two bars of syncopation with a fixed, small A-minor pentatonic motif.
+export function arrangementStep(step,{energy=.3}={}){
+ const i=step%16,bar=Math.floor(step/16)%2,events=[];
+ const hit=(kind,level,freq)=>events.push({type:'percussion',kind,level,freq});
+ if([0,6,10].includes(i)||(bar===1&&i===14))hit('kick',.21,55);
+ if(i===4||i===12)hit('snare',.16,180);
+ if(i%2===0||(energy>.55&&[3,11,15].includes(i)))hit('hat',i%4===2?.055:.035,6000);
+ if((bar===0&&i===11)||(bar===1&&i===7))hit('snare',.045,180);
+ if(i===0||i===8)events.push({type:'tone',kind:'bass',midi:bar===0?45:40,level:.13,duration:.12});
+ const slots=[2,7,10,14],index=slots.indexOf(i),motif=bar===0?[0,2,4,2]:[0,3,2,1];
+ if(index>=0)events.push({type:'tone',kind:'pulse',midi:palette[motif[index]],level:.09+energy*.06,duration:.11});
  return events;
 }
