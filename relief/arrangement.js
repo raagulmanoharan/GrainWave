@@ -16,20 +16,20 @@ export class MotifSong {
   if(this.stopStep<0||step>=this.stopStep)return [];
   this.energy=Math.max(energy,this.energy*.985);
   const remaining=this.stopStep-step,gain=energy>.02?1:Math.min(1,remaining/8)*.65;
-  return arrangementStep(step,{energy:this.energy,motif:this.motif}).map(e=>({...e,level:e.level*gain}));
+  return arrangementStep(step,{energy:this.energy,motif:this.motif}).map(e=>({...e,level:e.level*gain*.42}));
  }
 }
 export function arrangementStep(step,{energy=.3,motif=[57,62,64,60]}={}){
- const i=step%16,bar=Math.floor(step/16),events=[],hit=(kind,level,freq)=>events.push({type:'percussion',kind,level,freq});
+ const i=step%16,bar=Math.floor(step/16),events=[],hit=(kind,level,freq)=>events.push({type:'percussion',kind,level,freq,offset:kind==='hat'&&i%4===2?.008:0});
  if([0,6,10].includes(i)||(bar%4===3&&i===14))hit('kick',.19,55);
  if(i===4||i===12)hit('snare',.12,180);
  if(i%2===0)hit('hat',i%4===2?.04:.025,6000);
  if(bar%4===3&&i===11&&energy>.4)hit('snare',.035,180);
  if(i===0||i===8)events.push({type:'tone',kind:'bass',midi:bar%8===7?40:45,level:.11,duration:.15});
  const slots=[0,4,6,10],index=slots.indexOf(i);
- if(index>=0)events.push({type:'tone',kind:'bell',midi:motif[index],level:.08,duration:.38,pan:-.25});
+ if(index>=0)events.push({type:'tone',kind:'bell',midi:motif[index],level:.055,duration:.28,pan:-.25});
  const shift=2+Math.floor(bar/8)%3,other=slots.indexOf((i-shift+16)%16);
- if(other>=0&&bar>=2)events.push({type:'tone',kind:'bell',midi:motif[other],level:.04,duration:.32,pan:.3});
- if(bar%8>=4&&i===14)events.push({type:'tone',kind:'bell',midi:motif[2],level:.025,duration:.3,pan:.1});
+ if(other>=0&&bar>=2&&bar%2===1)events.push({type:'tone',kind:'bell',midi:motif[other],level:.022,duration:.25,pan:.3});
+ if(bar%8>=4&&i===14)events.push({type:'tone',kind:'bell',midi:motif[2],level:.016,duration:.22,pan:.1});
  return events;
 }

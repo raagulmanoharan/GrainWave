@@ -1,5 +1,5 @@
 import {MotionEcho} from './motion-echo.js?v=ghost-1';
-import {MotifSong,pulsePitch,idleTexture} from './arrangement.js?v=motif-1';
+import {MotifSong,pulsePitch,idleTexture} from './arrangement.js?v=mix-1';
 let song=new MotifSong();
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=traffic-2';
@@ -60,7 +60,7 @@ function drawNotes(w,h){
  ctx.strokeStyle='#fff6e8';ctx.strokeRect(x-5,y-5,10,10);ctx.fillStyle='#fff6e8';ctx.font='9px monospace';
  const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];ctx.fillText(`${names[note.midi%12]}${Math.floor(note.midi/12)-1}`,Math.min(w-30,x+12),Math.max(12,y-10));
 }
-async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=motif-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/100;master.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*2.5,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;master.connect(convolver);convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master)}
+async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=mix-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;master.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;master.connect(convolver);convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master)}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{outputChannelCount:[2]});output.instrument.connect(output)}return output.instrument}
 function perform(time){
  const state=expression.advance(time,{release:+$('release').value/100});
@@ -69,10 +69,10 @@ function perform(time){
  if(audio.currentTime-nextSongTime>.2)nextSongTime=audio.currentTime;
  const interval=60/+$('pulse').value/4;
  while(nextSongTime<audio.currentTime+.08){
-  for(const event of song.events(songStep,state.level))instrument(master).port.postMessage({...event,freq:event.freq||440*2**((event.midi-69)/12),time:nextSongTime,pan:event.pan??(state.point.x-.5)*.5});
+  for(const event of song.events(songStep,state.level))instrument(master).port.postMessage({...event,freq:event.freq||440*2**((event.midi-69)/12),time:nextSongTime+(event.offset||0),pan:event.pan??(state.point.x-.5)*.5});
   songStep++;nextSongTime+=interval;
  }
- if(state.note&&time-lastPercussion>80){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'pulse',freq:440*2**((currentPitch-69)/12),level:.08+state.level*.14,duration:.07+ +$('release').value/1000,noise:.35+ +$('breath').value/200,pan:(state.point.x-.5)*1.2})}
+ if(state.note&&time-lastPercussion>80){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'pulse',role:'lead',freq:440*2**((currentPitch-69)/12),level:.18+state.level*.14,duration:.14+Math.min(.08,+$('release').value/1000),noise:.06+ +$('breath').value/600,pan:(state.point.x-.5)*1.2})}
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
 }
 function syncPreview(){document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',playing);$('play').setAttribute('aria-label',playing?'Pause instrument':'Play instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
@@ -87,7 +87,7 @@ $('note-budget').oninput=()=>setBudget(+$('note-budget').value);
 $('pulse').oninput=()=>{if(delay&&audio)delay.delayTime.setTargetAtTime(60/+$('pulse').value/2,audio.currentTime,.1)};
 $('open-settings').onclick=()=>$('settings-panel').showModal();document.querySelector('[data-close]').onclick=()=>$('settings-panel').close();
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
-$('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/100,audio.currentTime,.03)};
+$('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
 setBudget(10);
 initMotion();initHands();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
