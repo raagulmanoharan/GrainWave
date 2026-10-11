@@ -382,3 +382,5 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 #settings-panel .settings-grid{position:absolute;top:calc(var(--frame-top) + var(--grid-cell));bottom:calc(var(--frame-bottom) + var(--grid-cell));left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));margin:0;border:0;overflow-y:auto;overscroll-behavior:contain;background:#080808;pointer-events:auto;scrollbar-width:thin}
 body[data-settings=true] #flip-camera{visibility:hidden}
 body[data-settings=true] #live-layer{pointer-events:none;opacity:.4}
+
+.tour-middle{border-left:1px solid #ffffff18;border-right:1px solid #ffffff18}
