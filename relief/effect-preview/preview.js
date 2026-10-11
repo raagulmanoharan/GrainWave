@@ -2,24 +2,27 @@ const $=id=>document.getElementById(id),canvas=$('surface'),overlay=$('lines'),c
 if(!gl){$('state').textContent='This preview requires WebGL 2.';throw Error('WebGL 2 unavailable')}
 const vertex=`#version 300 es
 precision highp float;
-uniform sampler2D uImage;uniform vec2 uGrid;uniform float uDepth,uTime;uniform vec2 uSize;
+uniform sampler2D uImage,uMap;uniform float uAspect;uniform vec2 uGrid;uniform float uDepth,uTime;uniform vec2 uSize;
 out vec2 vFace;out vec3 vColor;out float vLight,vHeight,vNoise;
 float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 void main(){
  int column=gl_InstanceID%int(uGrid.x),row=gl_InstanceID/int(uGrid.x);
  vec2 uv=(vec2(column,row)+.5)/uGrid;
- vec3 color=texture(uImage,uv).rgb;float l=luma(color);
- vec2 texel=1./uSize;float left=luma(texture(uImage,uv-vec2(texel.x*2.,0)).rgb),right=luma(texture(uImage,uv+vec2(texel.x*2.,0)).rgb);
- float saturation=max(max(color.r,color.g),color.b)-min(min(color.r,color.g),color.b);
- float field=clamp(.12+.72*(1.-l)+.24*saturation,0.,1.);
+ vec3 color=texture(uImage,uv).rgb;
+ float field=texture(uMap,uv).r;
  float noise=fract(sin(float(column)*17.1+float(row)*3.71)*43758.5453);
- float wave=sin(uv.y*17.+uv.x*8.+uTime*.55)*.5+.5;
- float height=(.006+pow(field,1.5)*.068)*uDepth*(.95+noise*.12+wave*.02);
+ // Relative inverse depth: nearby samples have a larger value.
+ float z=2.0+(1.-field)*1.15;
+ vec3 point=vec3((uv.x-.5)*2.*uAspect*z/2.8,(.5-uv.y)*2.*z/2.8,z);
  vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(0,1),vec2(0,1),vec2(1,0),vec2(1,1));
  vec2 q=corners[gl_VertexID];vFace=q;
- vec2 p=uv+vec2((q.x-.5)*1.02/uGrid.x,-height+q.y*(height+1.05/uGrid.y));
- vColor=color;vHeight=field;vNoise=noise;vLight=clamp(.48+(left-right)*5.,.15,.95);
- gl_Position=vec4(p.x*2.-1.,1.-p.y*2.,-height*(1.-q.y)*8.,1.);
+ float height=2./uGrid.y+uDepth*(.015+field*.32);
+ point.y+=(1.-q.y)*height;
+ point.x+=(q.x-.5)*2.*uAspect/uGrid.x;
+ // Small lateral viewpoint exposes the depth relief without changing the source.
+ point.x+=.18*(z-2.5);
+ vColor=color;vHeight=field;vNoise=noise;vLight=.8;
+ gl_Position=vec4(point.x/uAspect,point.y,(point.z-2.)*.25,point.z/2.8);
 }`;
 const fragment=`#version 300 es
 precision highp float;
@@ -36,18 +39,23 @@ void main(){
 }`;
 function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s}
 const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.bindVertexArray(gl.createVertexArray());
-const uniforms=Object.fromEntries(['uImage','uGrid','uDepth','uTime','uSize'].map(n=>[n,gl.getUniformLocation(program,n)]));
+const uniforms=Object.fromEntries(['uImage','uMap','uAspect','uGrid','uDepth','uTime','uSize'].map(n=>[n,gl.getUniformLocation(program,n)]));
 const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-let source=null,stream=null,paused=false,dirty=true,clock=0,last=0,frames=0,lastUpload=0;const photo=new Image();photo.onload=()=>{source=photo;upload();$('state').textContent='Original photograph · processed locally'};
-function upload(){if(!source)return;dirty=true;gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);gl.uniform2f(uniforms.uSize,source.videoWidth||source.naturalWidth,source.videoHeight||source.naturalHeight)}
+const depthTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,depthTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,1,1,0,gl.RED,gl.UNSIGNED_BYTE,new Uint8Array([128]));gl.uniform1i(uniforms.uMap,1);gl.activeTexture(gl.TEXTURE0);
+const worker=new Worker('./depth-worker.js',{type:'module'}),capture=document.createElement('canvas');let failed=false,busy=false,hasDepth=false,sourceId=0,lastInference=0,depthMs=0;
+worker.onmessage=({data})=>{if(data.status){$('state').textContent=data.status;return}busy=false;if(data.id!==sourceId)return;if(data.error){failed=true;$('state').textContent='Depth inference unavailable: '+data.error;return}const {pixels,width,height,ms}=data;gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,depthTexture);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,width,height,0,gl.RED,gl.UNSIGNED_BYTE,new Uint8Array(pixels));gl.activeTexture(gl.TEXTURE0);hasDepth=true;depthMs=ms;dirty=true;$('state').textContent=`Inferred relative depth · ${Math.round(ms)} ms / map · local processing`;};
+function infer(){if(failed||busy||!source||document.hidden)return;busy=true;const w=source.videoWidth||source.naturalWidth,h=source.videoHeight||source.naturalHeight;capture.width=320;capture.height=Math.round(320*h/w);capture.getContext('2d').drawImage(source,0,0,capture.width,capture.height);const frame=capture.getContext('2d').getImageData(0,0,capture.width,capture.height);worker.postMessage({id:sourceId,width:frame.width,height:frame.height,pixels:frame.data.buffer},[frame.data.buffer]);lastInference=performance.now();}
+function resetDepth(){sourceId++;hasDepth=false;failed=false;dirty=true;}
+let source=null,stream=null,paused=false,dirty=true,clock=0,last=0,frames=0,lastUpload=0;const photo=new Image();photo.onload=()=>{source=photo;resetDepth();upload();infer();$('state').textContent='Original photograph · processed locally'};
+function upload(){if(!source)return;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);dirty=true;gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);gl.uniform2f(uniforms.uSize,source.videoWidth||source.naturalWidth,source.videoHeight||source.naturalHeight)}
 function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio,1.5);const w=Math.round(r.width*d),h=Math.round(r.height*d);if(canvas.width!==w||canvas.height!==h){canvas.width=overlay.width=w;canvas.height=overlay.height=h;gl.viewport(0,0,w,h);dirty=true}}
 new ResizeObserver(resize).observe(canvas);
-function lines(time){const w=overlay.width,h=overlay.height;ctx.clearRect(0,0,w,h);ctx.lineWidth=.65;ctx.strokeStyle='#fff0dc88';ctx.fillStyle='#fff0dc';ctx.font=`${Math.max(9,w*.018)}px Arial`;const anchor={x:.56*w,y:(.39+Math.sin(time*.12)*.008)*h},points=[[.18,.23,'A4'],[.83,.34,'C5'],[.81,.68,'E5'],[.14,.73,''],[.4,.88,'']];for(let i=0;i<points.length;i++){const [u,v,label]=points[i],x=u*w,y=v*h;ctx.beginPath();ctx.moveTo(anchor.x,anchor.y);ctx.lineTo(x,y);ctx.stroke();const t=(time*.14+i*.17)%1;ctx.beginPath();ctx.arc(anchor.x+(x-anchor.x)*t,anchor.y+(y-anchor.y)*t,1.4,0,Math.PI*2);ctx.fill();if(label)ctx.fillText(label,x+6,y-5)}ctx.beginPath();ctx.arc(anchor.x,anchor.y,2.3,0,Math.PI*2);ctx.fill()}
-function draw(time){requestAnimationFrame(draw);resize();if(!source||document.hidden||time-last<33||(paused&&!stream&&!dirty))return;dirty=false;const delta=Math.min(100,time-last);last=time;if(!paused)clock+=delta*.001;resize();if(stream&&time-lastUpload>66){upload();lastUpload=time}gl.clearColor(.09,.012,.009,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const cols=+$('density').value,rows=Math.round(cols*.24);gl.uniform2f(uniforms.uGrid,cols,rows);gl.uniform1f(uniforms.uDepth,+$('depth').value/100);gl.uniform1f(uniforms.uTime,clock);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);lines(clock);frames++;window.reliefPreview={frames,strands:cols*rows,source:stream?'camera':'photo',clock,error:gl.getError()}}
+function lines(time){const w=overlay.width,h=overlay.height;ctx.clearRect(0,0,w,h);if(!hasDepth){ctx.drawImage(source,0,0,w,h);return}ctx.lineWidth=.65;ctx.strokeStyle='#fff0dc88';ctx.fillStyle='#fff0dc';ctx.font=`${Math.max(9,w*.018)}px Arial`;const anchor={x:.56*w,y:(.39+Math.sin(time*.12)*.008)*h},points=[[.18,.23,'A4'],[.83,.34,'C5'],[.81,.68,'E5'],[.14,.73,''],[.4,.88,'']];for(let i=0;i<points.length;i++){const [u,v,label]=points[i],x=u*w,y=v*h;ctx.beginPath();ctx.moveTo(anchor.x,anchor.y);ctx.lineTo(x,y);ctx.stroke();const t=(time*.14+i*.17)%1;ctx.beginPath();ctx.arc(anchor.x+(x-anchor.x)*t,anchor.y+(y-anchor.y)*t,1.4,0,Math.PI*2);ctx.fill();if(label)ctx.fillText(label,x+6,y-5)}ctx.beginPath();ctx.arc(anchor.x,anchor.y,2.3,0,Math.PI*2);ctx.fill()}
+function draw(time){requestAnimationFrame(draw);resize();if(!source||document.hidden||time-last<33||(paused&&!stream&&!dirty))return;dirty=false;const delta=Math.min(100,time-last);last=time;if(!paused)clock+=delta*.001;resize();if(!paused&&stream&&time-lastUpload>66){upload();lastUpload=time}if(!paused&&!busy&&(!hasDepth||stream&&time-lastInference>150))infer();gl.uniform1f(uniforms.uAspect,canvas.width/canvas.height);gl.clearColor(.09,.012,.009,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const cols=+$('density').value,rows=Math.round(cols*canvas.height/canvas.width);gl.uniform2f(uniforms.uGrid,cols,rows);gl.uniform1f(uniforms.uDepth,+$('depth').value/100);gl.uniform1f(uniforms.uTime,clock);if(hasDepth)gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);lines(clock);frames++;window.reliefPreview={frames,strands:cols*rows,source:stream?'camera':'photo',clock,hasDepth,depthMs,error:gl.getError()}}
 $('depth').oninput=()=>{dirty=true;$('depth-out').textContent=`${$('depth').value}%`};$('density').oninput=()=>{dirty=true;$('density-out').textContent=$('density').value};
 $('pause').onclick=()=>{paused=!paused;dirty=true;$('pause').textContent=paused?'Resume':'Pause'};
 $('compare').onclick=()=>{const on=$('image').classList.toggle('compare');$('compare').setAttribute('aria-pressed',on);$('compare').textContent=on?'Processed':'Original'};
 function stopCamera(){stream?.getTracks().forEach(t=>t.stop());stream=null;$('camera').textContent='Camera'}
-$('camera').onclick=async()=>{if(stream){stopCamera();source=photo;upload();return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640}},audio:false});$('feed').srcObject=stream;await $('feed').play();source=$('feed');upload();$('image').classList.remove('compare');$('compare').setAttribute('aria-pressed','false');$('state').textContent='Live camera · processed locally';$('camera').textContent='Back to photo'}catch(e){stopCamera();$('state').textContent=`Camera unavailable: ${e.message}`}};
-$('upload').onchange=()=>{const file=$('upload').files[0];if(!file)return;stopCamera();const url=URL.createObjectURL(file),image=new Image();image.onload=()=>{photo.src=url;source=image;$('original').src=url;upload();$('state').textContent='Your image · processed locally'};image.src=url};
-window.addEventListener('pagehide',stopCamera);document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){stopCamera();source=photo;upload()}});requestAnimationFrame(draw);
+$('camera').onclick=async()=>{if(stream){stopCamera();source=photo;resetDepth();upload();infer();return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640}},audio:false});$('feed').srcObject=stream;await $('feed').play();source=$('feed');resetDepth();upload();infer();$('image').classList.remove('compare');$('compare').setAttribute('aria-pressed','false');$('state').textContent='Live camera · processed locally';$('camera').textContent='Back to photo'}catch(e){stopCamera();$('state').textContent=`Camera unavailable: ${e.message}`}};
+$('upload').onchange=()=>{const file=$('upload').files[0];if(!file)return;stopCamera();const url=URL.createObjectURL(file),image=new Image();image.onload=()=>{photo.src=url;source=image;resetDepth();$('original').src=url;upload();infer();$('state').textContent='Your image · processed locally'};image.src=url};
+window.addEventListener('pagehide',stopCamera);document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){stopCamera();source=photo;resetDepth();upload()}});requestAnimationFrame(draw);
