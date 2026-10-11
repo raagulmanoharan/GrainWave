@@ -164,3 +164,11 @@ body[data-mode=playing] .relief-carousel{display:none}
 #capture-loop svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 #capture-loop[aria-pressed=true]{background:#fff;color:#ec3028;border-color:#fff}
 body[data-mode=camera] #capture-loop{display:none}
+
+/* One pixel icon family: filled grid shapes, never rounded strokes. */
+#play .pixel-icon,#capture-loop .pixel-icon,#open-settings .pixel-icon,#flip-camera .pixel-icon,.settings-top .pixel-icon{width:24px;height:24px;fill:currentColor;stroke:none;shape-rendering:crispEdges}
+#open-settings,#flip-camera{border:0;border-radius:0;background:transparent;backdrop-filter:none}
+.settings-top button{display:grid;place-items:center;border:0;background:transparent;border-radius:0}
+#capture-loop .icon-loop{display:none}
+#capture-loop[aria-pressed=true] .icon-magic{display:none}
+#capture-loop[aria-pressed=true] .icon-loop{display:block}
