@@ -68,7 +68,7 @@ function sampleVideo(){if(video.readyState<2)return;
  mergeTracking(time);sampleHands()}
 
 $('camera').onclick=startCamera;
-$('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();facing=facing==='user'?'environment':'user';points=[];$('play').disabled=true;await startCamera()};
+$('settings-flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();facing=facing==='user'?'environment':'user';points=[];$('play').disabled=true;await startCamera()};
 $('mirror-toggle').onchange=()=>{grainBusy=false;grainWorker?.postMessage({type:'reset'});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(playing&&stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h);drawLoopProgress(w,h,time)}if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
@@ -182,6 +182,7 @@ document.addEventListener('pointerdown',startWelcomeChords,{once:true});
 document.addEventListener('keydown',startWelcomeChords,{once:true});
 // The opening canvas is the start control; instrument controls appear after entry.
 canvas.setAttribute('role','button');canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','Tap to start Relief');
-const onboarding=new Onboarding({onOpen:()=>{landingType.setPlaying(true);status('')},onFinish:async()=>{if(!stream)await startCamera();if(!stream){$('tour-copy').textContent='Allow camera access in your browser, then tap GO to try again.';return false}await $('play').onclick();return playing}});
+const onboarding=new Onboarding({onOpen:()=>{landingType.setPlaying(true);status('')},onFinish:async()=>{if(playing)return true;if(!stream)await startCamera();if(!stream){$('tour-copy').textContent='Allow camera access in your browser, then tap GO to try again.';return false}await $('play').onclick();return playing}});
+$('flip-camera').onclick=()=>onboarding.open();
 canvas.addEventListener('click',async()=>{if(playing||audioStarting||onboarding.active)return;if(!onboarding.seen){onboarding.open();return}if(!stream)await startCamera();if(stream)$('play').click()});
 canvas.addEventListener('keydown',e=>{if(!playing&&(e.key==='Enter'||e.key===' ')){e.preventDefault();canvas.click()}});

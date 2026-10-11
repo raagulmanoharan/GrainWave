@@ -330,3 +330,5 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 
 #loop-progress{stroke:var(--progress-loop-color,#ff453a)}#capture-loop .loop-ring-track{stroke:color-mix(in srgb,var(--progress-loop-color,#ff453a) 20%,transparent)}
 #loop-tools button,#loop-tools #play{border-color:var(--selected-loop-color);border-width:1px;border-bottom-width:0}
+
+.help-label{position:relative;z-index:1;font:400 24px/1 ReliefPixel,monospace}#settings-flip-camera{border:1px solid #ffffff30;padding:14px 16px;color:#fff;background:transparent;font:400 14px/1 ReliefPixel,monospace;margin:8px 0 20px}
