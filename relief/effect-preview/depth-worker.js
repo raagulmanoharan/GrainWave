@@ -5,7 +5,7 @@ self.onmessage=async({data})=>{
    postMessage({status:'Loading depth model · first run downloads weights…'});
    const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/dist/transformers.min.js');
    env.allowLocalModels=false;
-   let device='wasm';try{if(await navigator.gpu?.requestAdapter())device='webgpu'}catch{}
+   let device='wasm';try{if(!new URL(self.location.href).searchParams.has('wasm')&&await navigator.gpu?.requestAdapter())device='webgpu'}catch{}
    try{estimator=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small',{device,dtype:'q8'})}catch(e){if(device==='wasm')throw e;estimator=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small',{device:'wasm',dtype:'q8'})}
    // Smaller, multiple-of-14 model input trades fine detail for live responsiveness.
    estimator.processor.image_processor.size={height:252,width:252};

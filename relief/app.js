@@ -1,4 +1,4 @@
-import {DepthCloud} from './depth-cloud.js?v=depth-cloud-1';
+import {DepthCloud} from './depth-cloud.js?v=mosh-1';
 import {enhanceFrame} from './postprocess.js';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=responsive-2';
