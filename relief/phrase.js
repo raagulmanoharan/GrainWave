@@ -55,30 +55,47 @@ export class PhraseSong {
   const choose=a=>a[Math.floor(random()*a.length)];
   const a=choose([[0,2,3,2],[0,1,2,1],[2,3,4,3]]),b=choose([[1,2,1,0],[3,2,1,2],[2,4,3,2]]);
   this.phrase=[...a,...a.slice(0,3),1,...b,2,1,1,0];
-  this.index=0;this.transpose=0;this.seeded=false;this.lastTrigger=-Infinity;this.lastMotion=-Infinity;this.loopOrigin=null;
+  this.index=0;this.transpose=0;this.seeded=false;this.lastTrigger=-Infinity;this.lastMotion=-Infinity;this.loopOrigin=null;this.build=0;this.lastAdvance=null;this.triggers=[];
  }
  trigger(y,time){
   if(time-this.lastTrigger<85)return null;
   // Change register only at phrase boundaries, never scramble a phrase mid-flight.
   if(this.index%16===0)this.transpose=y<.3?2:y>.7?-2:0;
   const midi=degreePitch(this.phrase[this.index%16]+this.transpose);
-  this.index++;this.seeded=true;this.lastTrigger=time;this.lastMotion=time;this.loopOrigin=null;return midi;
+  this.triggers.push(time);this.triggers=this.triggers.filter(t=>time-t<800);this.index++;this.seeded=true;this.lastTrigger=time;this.lastMotion=time;this.loopOrigin=null;return midi;
  }
- events(step,energy,{loop=false}={}){
-  if(!this.seeded)return [];
-  if(energy<=.02&&!loop)return [];
-  const i=step%16,bar=Math.floor(step/16)%4,events=[];
-  const hit=(kind,level,duration)=>events.push({type:'percussion',kind,freq:kind==='kick'?52:kind==='snare'?185:6500,level,duration,role:'drums'});
-  // Four-bar broken rhythm: anchored backbeat, deliberate syncopation, quiet ghosts.
-  if([[0,6,10],[0,7,10],[0,3,10],[0,6,11,14]][bar].includes(i))hit('kick',.24,.19);
-  if(i===4||i===12)hit('snare',.15,.13);
-  if((bar===1&&i===15)||(bar===3&&(i===10||i===15)))hit('snare',.035,.06);
-  if(i%2===0||([1,3].includes(bar)&&i===15))hit('hat',i%4===2?.043:.023,i===14?.075:.028);
-  if(i===0||i===10)events.push({type:'tone',kind:'bass',midi:degreePitch(this.transpose)-12,level:.095,duration:.14,role:'backing'});
+ advance(time,energy,sources=0){
+  const dt=this.lastAdvance===null?0:Math.min(.1,Math.max(0,(time-this.lastAdvance)/1000));this.lastAdvance=time;
+  const rate=this.triggers.filter(t=>time-t<800).length/8;
+  const target=energy>.02?Math.min(1,energy*.65+Math.max(0,sources-1)*.12+rate*.35):0;
+  this.build+=(target-this.build)*(1-Math.exp(-dt/(target>this.build?1.1:2.4)));
+  return this.build;
+ }
+ embellish(midi,bpm){
+  if(this.build<.28)return [];
+  const degree=this.phrase[(this.index-1+16)%16]+this.transpose,interval=60/bpm/4;
+  // Diatonic upper voices unfold into a rising sweep; lower energy gives one echo.
+  const voices=this.build>.7?[0,2,4,5]:this.build>.48?[0,2,4]:[0];
+  return voices.map((d,i)=>({type:'tone',kind:'pulse',role:'backing',midi:d?degreePitch(degree+d):midi,offset:interval*(i+1),duration:.12+i*.015,level:(.028+this.build*.027)*(1-i*.14),noise:.1,pan:(i%2?1:-1)*.25}));
+ }
+ events(step,energy,{loop=false,bpm=172}={}){
+  const i=step%16,bar=Math.floor(step/16)%4,events=[],b=this.build;
+  const hit=(kind,level,duration,offset=0)=>events.push({type:'percussion',kind,freq:kind==='kick'?52:kind==='snare'?185:6500,level,duration,offset,role:'drums'});
+  // The clock never disappears. Activity opens the break without changing its timing.
+  hit('hat',(.009+b*.026)*(i%4===0?1:.7),i%4===2?.042:.024);
+  if(!this.seeded)return events;
+  if(b>.08){
+   if([[0,10],[0,7,10],[0,3,10],[0,6,11]][bar].includes(i))hit('kick',.07+b*.17,.18);
+   if(i===4||i===12)hit('snare',.045+b*.12,.12);
+   if(b>.35&&[[6],[3,15],[7,14],[2,10,15]][bar].includes(i))hit('snare',.018+b*.025,.055);
+   if(b>.6&&[[14],[6],[13],[7,14]][bar].includes(i))hit('kick',.085+b*.07,.09);
+   if(b>.72&&bar===3&&(i===11||i===15))hit('snare',.055,.045,60/bpm/8);
+   if(i===0||i===10)events.push({type:'tone',kind:'bass',midi:degreePitch(this.transpose)-12,level:.025+b*.065,duration:.14,role:'backing'});
+  }
   if(loop){
    if(this.loopOrigin===null)this.loopOrigin=step;
    const offset=step-this.loopOrigin;
-   if(offset%2===0)events.push({type:'tone',kind:'bell',midi:degreePitch(this.phrase[Math.floor(offset/2)%16]+this.transpose),level:.16,duration:.22,role:'lead',pan:0});
+   if(offset%2===0)events.push({type:'tone',kind:'bell',midi:degreePitch(this.phrase[Math.floor(offset/2)%16]+this.transpose),level:.115,duration:.22,role:'lead',pan:0});
   }else this.loopOrigin=null;
   return events;
  }
