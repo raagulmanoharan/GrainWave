@@ -79,3 +79,12 @@ body[data-mode=camera] .visual-instruction{top:14%;left:12px;right:12px}
 
 body[data-mode=camera] .visual-instruction{top:12%;left:10px;right:10px}
 .landing-poster{height:76svh;max-height:76svh;object-fit:contain;object-position:center top}
+
+/* Centered typographic opening; the camera remains a quiet moving texture. */
+body[data-mode=camera] .stage::after{background:rgba(0,0,0,.82)}
+body[data-mode=camera] .visual-instruction{top:50%;left:20px;right:20px;transform:translateY(-50%)}
+.landing-poster{width:100%;height:auto;max-height:none;object-fit:contain}
+@media(min-width:700px){body[data-mode=camera] .visual-instruction{left:50%;right:auto;width:min(72vw,900px);transform:translate(-50%,-50%)}}
+
+body[data-mode=playing] .landing-description{display:none}
+.landing-description{z-index:3}
