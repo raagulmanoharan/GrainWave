@@ -1,11 +1,10 @@
 import {DepthCloud} from './depth-cloud.js?v=contrast-1';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=responsive-2';
-import {MotionExpression} from './expression.js?v=flow-1';
+import {MotionExpression} from './expression.js?v=position-1';
 import {pitch} from './music.js';
-import {PhraseComposer} from './phrase.js?v=flow-1';
 import {PointTracker} from './tracking.js';
-const expression=new MotionExpression(),composer=new PhraseComposer();
+const expression=new MotionExpression();
 let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
 import {fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
@@ -63,17 +62,16 @@ async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.web
 function soundSettings(){return {release:+$('release').value/100,pressure:+$('pressure').value/100,breath:+$('breath').value/100,opening:+$('opening').value/100,body:+$('body').value/100,jet:+$('jet').value/100,vibrato:+$('vibrato').value/100}}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-flute',{outputChannelCount:[2]});output.instrument.connect(output)}return output.instrument}
 function perform(time){
- const state=expression.advance(time,{tempo:+$('tempo').value,pace:+$('phrase-pace').value===4?1.2:1,release:+$('release').value/100});
+ const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
- if(state.note){const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:pitch(point.y,$('scale').value,1),velocity:state.level,point};const note=composer.compose(candidate,{scale:$('scale').value,sounding:[],flowing:true});currentPitch=note.midi;visibleNotes=[note,null,null];visibleTick++;lastLiveTime=time;}
+ if(state.note){const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:pitch(point.y,$('scale').value,1),velocity:state.level,point};const note=candidate;currentPitch=note.midi;visibleNotes=[note,null,null];visibleTick++;lastLiveTime=time;}
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{...soundSettings(),pressure:Math.min(1,+$('pressure').value/100*(.55+state.level*.65))}});
 }
 function syncPreview(){document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',playing);$('play').setAttribute('aria-label',playing?'Pause instrument':'Play instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
 function stop(){playing=false;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
-$('play').onclick=async()=>{if(playing){stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;composer.reset();expression.reset();currentPitch=null;playing=true;master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('Gentle motion whispers. Bigger motion blooms. Hold still to rest.')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
+$('play').onclick=async()=>{if(playing){stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;playing=true;master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('Gentle motion whispers. Bigger motion blooms. Hold still to rest.')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
 $('threshold').oninput=()=>updateThreshold(+$('threshold').value/100);
-$('tempo').oninput=()=>$('tempo-out').textContent=`${$('tempo').value} BPM`;$('scale').onchange=()=>{composer.reset();mergeTracking(performance.now())};
-$('phrase-pace').onchange=()=>{expression.nextNote=0};
+$('scale').onchange=()=>{mergeTracking(performance.now())};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();releaseCamera();cancelAnimationFrame(frame)}else{frame=requestAnimationFrame(render);startCamera()}});window.addEventListener('pagehide',()=>{stop();releaseCamera();cancelAnimationFrame(frame)});
 
 function setBudget(value){noteBudget=Math.max(1,Math.min(24,Math.round(value)));$('notes-out').textContent=noteBudget;rebuildNotes()}
