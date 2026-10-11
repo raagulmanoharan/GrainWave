@@ -384,3 +384,10 @@ body[data-settings=true] #flip-camera{visibility:hidden}
 body[data-settings=true] #live-layer{pointer-events:none;opacity:.4}
 
 .tour-middle{border-left:1px solid #ffffff18;border-right:1px solid #ffffff18}
+
+body[data-settings=true] #open-settings,body[data-settings=true] #live-layer,body[data-settings=true] #capture-loop,body[data-settings=true] #loop-stack,body[data-settings=true] #loop-tools,body[data-settings=true] #loop-flow,body[data-settings=true] #status{visibility:hidden}
+#settings-panel .settings-grid{border:1px solid #ffffff18}
+#settings-panel .settings-about p{position:fixed;left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));bottom:var(--frame-bottom);height:var(--grid-cell);padding:0 10px;margin:0;display:flex;align-items:center;justify-content:center;background:#080808;border-top:1px solid #ffffff18;font:400 11px/1.4 Arial,sans-serif;color:#ffffff80;text-align:center;z-index:2}
+#settings-panel{background:#080808}
+#settings-panel::before{content:'';position:absolute;top:var(--frame-top);bottom:var(--frame-bottom);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));border-left:1px solid #ffffff18;border-right:1px solid #ffffff18;pointer-events:none}
+#settings-panel .settings-top{border-bottom:1px solid #ffffff18}
