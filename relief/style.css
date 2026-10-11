@@ -394,3 +394,7 @@ body[data-settings=true] #open-settings,body[data-settings=true] #live-layer,bod
 
 #settings-panel .settings-top button{border:0;border-left:1px solid #ffffff18;outline:none;box-shadow:none}#settings-panel .settings-top button:focus-visible{outline:1px solid #ffffff50;outline-offset:-8px}
 #settings-panel #settings-flip-camera{appearance:none;width:20px;height:20px;padding:0;margin:0;border:1px solid #ffffff90;border-radius:0;background:none;display:grid;place-items:center}#settings-flip-camera:checked::after{content:"";width:10px;height:10px;background:#fff}
+/* One shared margin grid frames both the instrument and settings. */
+body[data-settings=true] .margin-frame{z-index:8;pointer-events:none}
+#settings-panel::before{content:none}
+#settings-panel .settings-grid,#settings-panel .settings-top,#settings-panel .settings-top button,#settings-panel .settings-about p{border:0}
