@@ -1,6 +1,6 @@
-import {LandingType} from './landing-type.js?v=type-stack-1';
+import {LandingType} from './landing-type.js?v=type-stack-2';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=type-stack-1';
+import {drawPosterPaths} from './poster-paths.js?v=type-stack-2';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
