@@ -372,3 +372,13 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 #settings-panel{--grid-cell:clamp(56px,16vw,80px)}
 
 .settings-about canvas{image-rendering:auto}
+
+/* Settings inhabit the existing instrument grid rather than a separate screen. */
+#settings-panel{position:absolute;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;z-index:7;background:transparent;overflow:hidden;animation:none!important;pointer-events:none}
+#settings-panel .settings-top{position:absolute;top:var(--frame-top);left:var(--frame-left);right:var(--frame-right);height:var(--grid-cell);padding:0;border:0;background:transparent;pointer-events:none}
+#settings-panel .settings-top>span{display:none}
+#settings-panel .settings-top button{position:absolute;top:0;right:0;width:var(--grid-cell);height:var(--grid-cell);border:1px solid #ffffff18;pointer-events:auto;background:#080808}
+#settings-panel #settings-title{position:absolute;top:var(--frame-top);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:var(--grid-cell);display:grid;place-items:center;padding:0;margin:0;border:0;background:#080808;font:500 16px/1 Arial,sans-serif;letter-spacing:-.3px}
+#settings-panel .settings-grid{position:absolute;top:calc(var(--frame-top) + var(--grid-cell));bottom:calc(var(--frame-bottom) + var(--grid-cell));left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));margin:0;border:0;overflow-y:auto;overscroll-behavior:contain;background:#080808;pointer-events:auto;scrollbar-width:thin}
+body[data-settings=true] #flip-camera{visibility:hidden}
+body[data-settings=true] #live-layer{pointer-events:none;opacity:.4}

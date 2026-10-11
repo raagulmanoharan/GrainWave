@@ -122,7 +122,7 @@ function syncLoopRack(){
 }
 function releaseSelected(){if(noteBuffer.selection)instrument(master).port.postMessage({type:'release-role',role:`loop:${noteBuffer.selected}`})}
 $('capture-loop').onclick=()=>{if(!noteBuffer.capture(performance.now()))return;capturedNoticeUntil=performance.now()+1800;lastLayerPitch=null;liveRunning=false;visualLoop.looping=true;expression.reset();syncLoopButton();syncPreview()};
-$('live-layer').onclick=()=>{capturedNoticeUntil=0;noteBuffer.selected=null;if(!liveRunning){expression.reset();lastLayerPitch=null}liveRunning=true;syncLoopRack();syncPreview()};
+$('live-layer').onclick=()=>{if(settingsPanel.open)return;capturedNoticeUntil=0;noteBuffer.selected=null;if(!liveRunning){expression.reset();lastLayerPitch=null}liveRunning=true;syncLoopRack();syncPreview()};
 for(const [id,factor] of [['loop-half',.5],['loop-double',2]])$(id).onclick=()=>{releaseSelected();noteBuffer.speed(factor,performance.now());syncLoopRack()};
 for(const [id,octave] of [['loop-down',-12],['loop-up',12]])$(id).onclick=()=>{releaseSelected();noteBuffer.transpose(octave);syncLoopRack()};
 $('play').onclick=async()=>{if(playing){if(noteBuffer.selection){releaseSelected();noteBuffer.togglePause(performance.now());syncLoopRack();syncPreview()}else if(noteBuffer.locked){liveRunning=!liveRunning;expression.reset();syncPreview()}else stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;visualLoop.reset(performance.now());loopHighlights=[];song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=audio.currentTime;playing=true;liveRunning=true;ambientBed.start();master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
@@ -133,7 +133,12 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();rel
 function setBudget(value){noteBudget=Math.max(1,Math.min(24,Math.round(value)));$('notes-out').textContent=noteBudget;rebuildNotes()}
 $('note-budget').oninput=()=>setBudget(+$('note-budget').value);
 $('pulse').oninput=()=>{if(delay&&audio)delay.delayTime.setTargetAtTime(60/+$('pulse').value/2,audio.currentTime,.1)};
-$('open-settings').onclick=()=>$('settings-panel').showModal();document.querySelector('[data-close]').onclick=()=>{const panel=$('settings-panel');panel.classList.add('closing');setTimeout(()=>{panel.close();panel.classList.remove('closing')},220)};
+const settingsPanel=$('settings-panel');canvas.parentElement.append(settingsPanel);let resumeLiveAfterSettings=false;
+function closeSettings(){settingsPanel.close();delete document.body.dataset.settings;liveRunning=resumeLiveAfterSettings&&playing;expression.reset();syncPreview()}
+$('open-settings').onclick=()=>{resumeLiveAfterSettings=liveRunning;liveRunning=false;expression.reset();master?.instrument?.port.postMessage({type:'release-role',role:'lead'});document.body.dataset.settings='true';settingsPanel.show();syncPreview()};
+document.querySelector('[data-close]').onclick=closeSettings;
+document.addEventListener('keydown',e=>{if(settingsPanel.open&&e.key==='Escape'){e.preventDefault();closeSettings()}});
+
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
 $('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
 setBudget(10);
