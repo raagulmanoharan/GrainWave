@@ -203,3 +203,33 @@ body[data-mode=playing] .margin-frame i{display:none}
 #loop-progress{stroke-width:1}
 #play.layer-ready::before{background:#fff}
 #capture-loop:disabled{opacity:.5}
+
+/* Extended drafting grid with corner cells, matching the supplied sketch. */
+.stage{--grid-cell:clamp(56px,16vw,80px)}
+.margin-frame{border:0}
+.margin-frame span{position:absolute;display:block;background:#ffffff80}
+.grid-left,.grid-right{top:-10px;bottom:-10px;width:1px}
+.grid-left{left:0}.grid-right{right:0}
+.grid-top,.grid-bottom{left:-10px;right:-10px;height:1px}
+.grid-top{top:0}.grid-bottom{bottom:0}
+.margin-frame .grid-col-left,.margin-frame .grid-col-right{top:-24px;bottom:-24px;width:1px;background:#ffffff20}
+.grid-col-left{left:var(--grid-cell)}.grid-col-right{right:var(--grid-cell)}
+.margin-frame .grid-row-top,.margin-frame .grid-row-bottom{left:-24px;right:-24px;height:1px;background:#ffffff20}
+.grid-row-top{top:var(--grid-cell)}.grid-row-bottom{bottom:var(--grid-cell)}
+.title-area{position:absolute;left:12px;right:12px;top:calc(var(--grid-cell) + 12px);bottom:calc(var(--grid-cell) + 12px)}
+.margin-frame i{width:var(--grid-cell);height:var(--grid-cell);background:transparent;border:1px solid #fff}
+.frame-tl{left:0;top:0}.frame-tr{right:0;top:0}.frame-bl{left:0;bottom:0}.frame-br{right:0;bottom:0}
+#open-settings,#flip-camera,#capture-loop,#play{width:var(--grid-cell);height:var(--grid-cell)}
+#open-settings,#capture-loop{left:var(--frame-left)}
+#flip-camera,#play{right:var(--frame-right)}
+#open-settings,#flip-camera{top:var(--frame-top)}
+#capture-loop,#play{bottom:var(--frame-bottom)}
+#open-settings::before,#flip-camera::before,#capture-loop::before,#play::before{inset:0;width:100%;height:100%;background:transparent}
+#capture-loop::before{background:#ec3028;border-color:#ec3028}
+#play::before,#play.layer-ready::before{background:#fff}
+#open-settings .pixel-icon,#flip-camera .pixel-icon,#capture-loop .pixel-icon,#play .pixel-icon{position:relative;z-index:1;display:block!important}
+#play .icon-pause,#play .icon-plus,#capture-loop .icon-loop{display:none!important}
+#play.playing .icon-play,#play.layer-ready .icon-play,#capture-loop[aria-pressed=true] .icon-magic{display:none!important}
+#play.playing .icon-pause,#play.layer-ready .icon-plus,#capture-loop[aria-pressed=true] .icon-loop{display:block!important}
+#capture-loop[aria-pressed=true]{color:#fff}
+#capture-loop .loop-ring{inset:0;width:100%;height:100%;z-index:2}

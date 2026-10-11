@@ -15,8 +15,8 @@ export class LandingType{
   ctx.lineWidth=.65;ctx.setLineDash([]);
   this.edges.forEach(([a,b],i)=>{const u=project(a,i),v=project(b,i);ctx.globalAlpha=(u.z+v.z>0?.5:.2)*(this.open?Math.min(1,p*3):1-p);ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(v.x,v.y);if(burst>.06){const length=1+burst*2;ctx.lineTo(w/2+(v.x-w/2)*length,h/2+(v.y-h/2)*length)}ctx.stroke()});
   // Resolve safe-area CSS through the actual frame, not the viewport estimate.
-  const frame=document.querySelector('.margin-frame').getBoundingClientRect(),bounds=this.canvas.getBoundingClientRect();
-  const left=frame.left-bounds.left+10,top=frame.top-bounds.top+10,targetW=frame.width-20,targetH=frame.height-20;
+  const frame=document.querySelector('.title-area').getBoundingClientRect(),bounds=this.canvas.getBoundingClientRect();
+  const left=frame.left-bounds.left,top=frame.top-bounds.top,targetW=frame.width,targetH=frame.height;
   ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=this.open?Math.min(1,p*3):1;
   if(!this.open){const bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];ctx.beginPath();for(let y=top;y<top+targetH;y+=6)for(let x=left;x<left+targetW;x+=6){const ix=Math.floor((x-left)/6),iy=Math.floor((y-top)/6);if(bayer[(iy%4)*4+ix%4]/16>=p)ctx.rect(x,y,6,6)}ctx.clip()}
   ctx.drawImage(this.title,left,top,targetW,targetH);ctx.restore();
