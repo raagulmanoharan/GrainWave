@@ -82,7 +82,7 @@ export class DepthCloud {
   const width=Math.max(1,Math.round(r.width*d)),height=Math.max(1,Math.round(r.height*d));
   if(c.width!==width||c.height!==height){c.width=width;c.height=height;gl.viewport(0,0,width,height)}
   if(time-this.lastDraw<33)return this.ready;this.lastDraw=time;
-  const fw=80,fh=Math.min(128,Math.round(fw*height/width));
+  const fh=Math.min(128,Math.round(80*height/width)),fw=Math.max(1,Math.round(fh*width/height));
   if(this.flowWidth!==fw||this.flowHeight!==fh){this.reset();this.flowWidth=fw;this.flowHeight=fh;this.serial=0;this.history=[];}
   this.capture.width=fw;this.capture.height=fh;drawCamera(this.context,fw,fh);
   const rgba=this.context.getImageData(0,0,fw,fh).data,gray=new Uint8Array(fw*fh);
