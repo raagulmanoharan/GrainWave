@@ -5,7 +5,8 @@ const visualLoop=new VisualLoop();let loopHighlights=[];
 import {SceneMemory} from './scene-memory.js?v=splice-1';
 const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
 import {MotionEcho} from './motion-echo.js?v=drive-1';
-import {MotifSong,pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
+import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
+import {PhraseSong as MotifSong} from './phrase.js?v=phrase-1';
 let song=new MotifSong();
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=still-2';
@@ -58,20 +59,14 @@ $('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();f
 $('mirror-toggle').onchange=()=>{visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong();motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function gradient(w,h,time){const t=reduced?0:time*.00015;ctx.fillStyle='#461329';ctx.fillRect(0,0,w,h);const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#682015');g.addColorStop(.48,'#320f20');g.addColorStop(1,'#090811');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);const ax=w*(.65+Math.sin(t)*.25),ay=h*(.23+Math.cos(t*.8)*.17),r=Math.max(w,h)*.85;const glow=ctx.createRadialGradient(ax,ay,0,ax,ay,r);glow.addColorStop(0,'#71340fb0');glow.addColorStop(.35,'#76241760');glow.addColorStop(1,'#7a241200');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);const pink=ctx.createRadialGradient(w*(.15+Math.sin(t+.8)*.15),h*.7,0,w*.1,h*.7,h*.7);pink.addColorStop(0,'#42152e40');pink.addColorStop(1,'#63214400');ctx.fillStyle=pink;ctx.fillRect(0,0,w,h)}
-function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}else gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);drawLoopProgress(w,h,time);if(accent&&time<accent.until){ctx.fillStyle='#080b11';ctx.fillRect(accent.x*w-5,accent.y*h-5,10,10);ctx.fillStyle='#ff5b6e';ctx.fillRect(accent.x*w-3,accent.y*h-3,6,6)}if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
-function drawNotes(w,h){
- const note=visibleNotes[0];if(!note||expression.level<.02)return;
- const x=note.point.x*w,y=note.point.y*h;ctx.strokeStyle='#ff5b6e88';ctx.lineWidth=.7;
- for(const p of tracked.slice(0,3)){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(p.x*w,p.y*h);ctx.stroke()}
- ctx.strokeStyle='#080b11';ctx.lineWidth=5;ctx.strokeRect(x-5,y-5,10,10);ctx.strokeStyle='#ff5b6e';ctx.lineWidth=2.5;ctx.strokeRect(x-5,y-5,10,10);ctx.fillStyle='#ff5b6e';ctx.font='9px monospace';
- const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];ctx.fillText(`${names[note.midi%12]}${Math.floor(note.midi/12)-1}`,Math.min(w-30,x+12),Math.max(12,y-10));
-}
-async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=drive-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='2x';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;master.connect(delay);delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;master.connect(convolver);convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master);updateDistortion()}
-function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{outputChannelCount:[2]});output.instrument.connect(output)}return output.instrument}
+function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}else gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time)}drawTracked(w,h);drawLoopProgress(w,h,time);if(accent&&time<accent.until){ctx.fillStyle='#080b11';ctx.fillRect(accent.x*w-5,accent.y*h-5,10,10);ctx.fillStyle='#ff5b6e';ctx.fillRect(accent.x*w-3,accent.y*h-3,6,6)}if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
+async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('pulse-worklet.js?v=kit-2');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='2x';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master);updateDistortion()}
+function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{numberOfOutputs:2,outputChannelCount:[2,2]});output.instrument.connect(output,0);output.instrument.connect(delay,1);output.instrument.connect(reverbWet.inputNode,1)}return output.instrument}
 function perform(time){
  const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
- if(state.note){visualLoop.movement(time,true);loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:pulsePitch(point.y),velocity:state.level,point};const note=candidate;currentPitch=note.midi;visibleNotes=[note,null,null];visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});visibleTick++;lastLiveTime=time;song.learn(note.midi,songStep,Math.floor(audio.currentTime/(60/+$('pulse').value/2)));}
+ const phrasePitch=state.note?song.trigger(state.point.y,time):null;const trigger=phrasePitch!==null;
+ if(trigger){visualLoop.movement(time,true);loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:phrasePitch,velocity:state.level,point};const note=candidate;currentPitch=note.midi;visibleNotes=[note,null,null];visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});visibleTick++;lastLiveTime=time;}
  if(audio.currentTime-nextSongTime>.2)nextSongTime=audio.currentTime;
  visualLoop.progress(time,song.seeded);
  const interval=60/+$('pulse').value/4;
@@ -83,7 +78,7 @@ function perform(time){
 
   songStep++;nextSongTime+=interval;
  }
- if(state.note&&time-lastPercussion>80){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'pulse',role:'lead',freq:440*2**((currentPitch-69)/12),level:.18+state.level*.14,duration:Math.min(.24,(.14+Math.min(.08,+$('release').value/1000))*(.65+Math.random()*.65)),noise:.12+ +$('breath').value/600,pan:(state.point.x-.5)*1.2});
+ if(trigger){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'pulse',role:'lead',freq:440*2**((currentPitch-69)/12),level:.18+state.level*.14,duration:Math.min(.24,(.14+Math.min(.08,+$('release').value/1000))*(.65+Math.random()*.65)),noise:.12+ +$('breath').value/600,pan:(state.point.x-.5)*1.2});
   if(Math.random()<.18)instrument(master).port.postMessage({type:'grain',time:audio.currentTime+60/+$('pulse').value*(.25+Math.floor(Math.random()*3)*.25),length:.025+Math.random()*.045,offset:.07+Math.random()*.25,rate:Math.random()<.3?-1:1,level:.1,pan:Math.random()*.8-.4});
   if(Math.random()<.14)instrument(master).port.postMessage({type:'tone',role:'backing',kind:'pulse',freq:440*2**((currentPitch-69)/12),level:.025,duration:.12,time:audio.currentTime+60/+$('pulse').value*(.5+Math.random()),noise:.2});
   if(time-lastAccent>2200&&Math.random()<.08){accent={x:state.point.x,y:state.point.y,until:time+140};lastAccent=time}
@@ -107,14 +102,14 @@ setBudget(10);
 initMotion();initHands();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
 function drawTracked(w,h){
- const now=performance.now();loopHighlights=loopHighlights.filter(p=>p.end>now);const sources=playing&&visualLoop.looping?[...visualLoop.points.values()]:tracked.filter(p=>(expression.active.get(p.id)||0)>now).slice(0,6);
- ctx.save();ctx.lineWidth=1.4;ctx.shadowColor='#000000';ctx.shadowBlur=4;ctx.setLineDash(visualLoop.looping?[2,4]:[]);ctx.font='10px Helvetica, Arial, sans-serif';
+ const now=performance.now();loopHighlights=loopHighlights.filter(p=>p.end>now);const sources=playing&&visualLoop.looping?[...visualLoop.points.values()]:tracked.filter(p=>(expression.active.get(p.id)||0)>now).slice(0,6).map(p=>({...p,midi:[...visualLoop.points.values()].reverse().find(n=>n.sourceId===p.id)?.midi??p.midi}));
+ ctx.save();ctx.lineWidth=1;ctx.shadowColor='#000000';ctx.shadowBlur=4;ctx.setLineDash(visualLoop.looping?[2,4]:[]);ctx.font='10px Helvetica, Arial, sans-serif';
  const anchor=sources.find(p=>(p.sourceId||p.id)===expression.point.id)||sources[0];
  if(anchor){ctx.strokeStyle='#fff4df80';for(const p of sources){if(p===anchor)continue;ctx.beginPath();ctx.moveTo(anchor.x*w,anchor.y*h);ctx.lineTo(p.x*w,p.y*h);ctx.stroke()}}
  for(const p of sources){
   const x=p.x*w,y=p.y*h,active=playing&&(visualLoop.looping?loopHighlights.some(n=>n.id===p.id&&n.start<=now):expression.level>.02&&(p.sourceId||p.id)===expression.point.id);
-  ctx.lineWidth=active?2.4:1.4;ctx.strokeStyle=active?'#ff5b6e':'#fff0ce';ctx.fillStyle=active?'#ff5b6e28':'#fff4df0b';
-  if(p.box){const b=p.box,bx=Math.max(0,b.x*w-5),by=Math.max(0,b.y*h-5),bw=Math.min(w-bx,b.w*w+10),bh=Math.min(h-by,b.h*h+10);if(active){ctx.save();ctx.strokeStyle='#080b11';ctx.lineWidth=5.5;ctx.strokeRect(bx,by,bw,bh);ctx.restore()}ctx.strokeRect(bx,by,bw,bh)}
+  ctx.lineWidth=1;ctx.strokeStyle=active?'#ff5b6e':'#fff0ce';ctx.fillStyle=active?'#ff5b6e28':'#fff4df0b';
+  if(p.box){const b=p.box,bx=Math.max(0,b.x*w-5),by=Math.max(0,b.y*h-5),bw=Math.min(w-bx,b.w*w+10),bh=Math.min(h-by,b.h*h+10);ctx.strokeRect(bx,by,bw,bh)}
   ctx.beginPath();ctx.moveTo(x-7,y);ctx.lineTo(x+7,y);ctx.moveTo(x,y-7);ctx.lineTo(x,y+7);ctx.stroke();
   ctx.strokeRect(x-4,y-4,8,8);
   const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
