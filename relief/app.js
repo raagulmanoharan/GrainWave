@@ -1,5 +1,4 @@
-import {DepthCloud} from './depth-cloud.js?v=flow-1';
-import {enhanceFrame} from './postprocess.js';
+import {DepthCloud} from './depth-cloud.js?v=contrast-1';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=responsive-2';
 import {MotionExpression} from './expression.js?v=flow-1';
@@ -8,10 +7,10 @@ import {PhraseComposer} from './phrase.js?v=flow-1';
 import {PointTracker} from './tracking.js';
 const expression=new MotionExpression(),composer=new PhraseComposer();
 let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
-import {sampleDither,fitCover} from './dither.js';
-const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed'),sample=document.createElement('canvas'),sc=sample.getContext('2d',{willReadFrequently:true});
+import {fitCover} from './dither.js';
+const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
+const sceneContext=$('scene').getContext('2d');
 const depthCloud=new DepthCloud($('depth-cloud'),text=>$('depth-status').textContent=text);
-const ditherCanvas=document.createElement('canvas'),dc=ditherCanvas.getContext('2d');
 
 let facing='environment',tracked=[],handWorker=null,handReady=false,handBusy=false,lastHandResult=0,lastHandRequest=0,handFailed=false,handResult={landmarks:[]},motionSources=[],recentRegions=[],lastHandPresence=0;const motionCanvas=document.createElement('canvas'),mc=motionCanvas.getContext('2d',{willReadFrequently:true});
 const motionTracker=new MotionTracker(),tracker=new PointTracker(),handCanvas=document.createElement('canvas'),hc=handCanvas.getContext('2d');
@@ -41,8 +40,7 @@ async function sampleHands(){const now=performance.now();if(!handReady||handBusy
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
 function receiveMotion(d){if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];motionTracker.cameraUncertain=true;return}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
 function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=responsive-2',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null}}
-function sampleVideo(){if(video.readyState<2)return;if(!depthCloud.ready){sample.width=144;sample.height=Math.max(1,Math.round(144*canvas.clientHeight/canvas.clientWidth));drawCamera(sc,sample.width,sample.height);const data=sc.getImageData(0,0,sample.width,sample.height).data;points=sampleDither(enhanceFrame(data,sample.width,sample.height),sample.width,sample.height,threshold);
- ditherCanvas.width=sample.width*4;ditherCanvas.height=sample.height*4;for(const p of points){dc.fillStyle='#08080d';dc.globalAlpha=.58+p.energy*.34;dc.fillRect(p.x*ditherCanvas.width-1.44,p.y*ditherCanvas.height-1.44,2.88,2.88)}}
+function sampleVideo(){if(video.readyState<2)return;
  const time=performance.now();if(!motionBusy){motionCanvas.width=224;motionCanvas.height=Math.round(224*canvas.clientHeight/canvas.clientWidth);drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}
  else{const sources=motionTracker.update(data,motionCanvas.width,motionCanvas.height,time,noteBudget,+$('motion-sensitivity').value/100);receiveMotion({type:'result',generation:cameraGeneration,sources,state:motionTracker.state,cameraMotion:motionTracker.cameraMotion,cameraUncertain:motionTracker.cameraUncertain})}}
@@ -53,7 +51,7 @@ $('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();f
 $('mirror-toggle').onchange=()=>{depthCloud.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function gradient(w,h,time){const t=reduced?0:time*.00015;ctx.fillStyle='#461329';ctx.fillRect(0,0,w,h);const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#682015');g.addColorStop(.48,'#320f20');g.addColorStop(1,'#090811');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);const ax=w*(.65+Math.sin(t)*.25),ay=h*(.23+Math.cos(t*.8)*.17),r=Math.max(w,h)*.85;const glow=ctx.createRadialGradient(ax,ay,0,ax,ay,r);glow.addColorStop(0,'#71340fb0');glow.addColorStop(.35,'#76241760');glow.addColorStop(1,'#7a241200');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);const pink=ctx.createRadialGradient(w*(.15+Math.sin(t+.8)*.15),h*.7,0,w*.1,h*.7,h*.7);pink.addColorStop(0,'#42152e40');pink.addColorStop(1,'#63214400');ctx.fillStyle=pink;ctx.fillRect(0,0,w,h)}
-function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);const cloudVisible=stream&&depthCloud.update(time,video,drawCamera,threshold);ctx.clearRect(0,0,w,h);if(!cloudVisible)gradient(w,h,time);if(!cloudVisible&&video.readyState>=2){ctx.save();ctx.globalAlpha=.27;ctx.filter='grayscale(1) contrast(1.4)';drawCamera(ctx,w,h);ctx.restore()}if(stream&&time-lastSample>60){sampleVideo();lastSample=time}ctx.globalAlpha=1;if(!cloudVisible&&ditherCanvas.width){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(ditherCanvas,0,0,w,h);ctx.restore()}if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
+function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);const background=$('scene');if(background.width!==canvas.width||background.height!==canvas.height){background.width=canvas.width;background.height=canvas.height}sceneContext.setTransform(d,0,0,d,0,0);sceneContext.fillStyle='#170e16';sceneContext.fillRect(0,0,w,h);if(video.readyState>=2){sceneContext.save();sceneContext.globalAlpha=.82;drawCamera(sceneContext,w,h);sceneContext.restore()}const cloudVisible=stream&&depthCloud.update(time,video,drawCamera,threshold);ctx.clearRect(0,0,w,h);if(!cloudVisible)gradient(w,h,time);if(!cloudVisible&&video.readyState>=2){ctx.save();ctx.globalAlpha=.7;drawCamera(ctx,w,h);ctx.restore()}if(stream&&time-lastSample>60){sampleVideo();lastSample=time}ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
 function drawNotes(w,h){
  const note=visibleNotes[0];if(!note||expression.level<.02)return;
  const x=note.point.x*w,y=note.point.y*h;ctx.strokeStyle='#fff4df66';ctx.lineWidth=.7;

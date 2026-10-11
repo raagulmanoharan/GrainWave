@@ -2,7 +2,7 @@ import {motionFlow,advectDepth} from './motion-depth.js?v=mosh-1';
 const vertex=`#version 300 es
 precision highp float;
 uniform sampler2D uImage,uMap,uFlow;uniform float uAspect;uniform vec2 uGrid;uniform float uDepth,uTime;uniform vec2 uSize;
-out vec2 vFace;out vec3 vColor;out float vLight,vHeight,vNoise;
+out vec2 vFace;out vec3 vColor;out float vLight,vHeight,vNoise,vKeep;
 float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 void main(){
  int column=gl_InstanceID%int(uGrid.x),row=gl_InstanceID/int(uGrid.x);
@@ -10,6 +10,10 @@ void main(){
  vec3 flow=texture(uFlow,uv).rgb;
  vec2 velocity=(flow.rg*255.-128.)/32.;
  vec3 color=texture(uImage,clamp(uv-velocity/uSize*2.,vec2(0),vec2(1))).rgb;
+ // Select local contrast, not absolute brightness: dark birds survive against sky.
+ vec2 pixel=2./uSize;float center=luma(texture(uImage,uv).rgb);
+ float contrast=max(max(abs(center-luma(texture(uImage,uv+vec2(pixel.x,0)).rgb)),abs(center-luma(texture(uImage,uv-vec2(pixel.x,0)).rgb))),max(abs(center-luma(texture(uImage,uv+vec2(0,pixel.y)).rgb)),abs(center-luma(texture(uImage,uv-vec2(0,pixel.y)).rgb))));
+ vKeep=(contrast>.14||(flow.b>.12&&contrast>.045))?1.:0.;
  float field=texture(uMap,uv).r;
  float noise=fract(sin(float(column)*17.1+float(row)*3.71)*43758.5453);
  // Relative inverse depth: nearby samples have a larger value.
@@ -17,8 +21,8 @@ void main(){
  vec3 point=vec3((uv.x-.5)*2.*uAspect*z/2.8,(.5-uv.y)*2.*z/2.8,z);
  vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(0,1),vec2(0,1),vec2(1,0),vec2(1,1));
  vec2 q=corners[gl_VertexID];vFace=q;
- float height=2./uGrid.y+uDepth*(.015+field*.32);
- height+=flow.b*uDepth*.1;
+ float height=2./uGrid.y+uDepth*(.003+field*.055);
+ height+=flow.b*uDepth*.025;
  point.y+=(1.-q.y)*height;
  point.x+=velocity.x/uSize.x*(1.-q.y)*2.;
  point.x+=(q.x-.5)*2.*uAspect/uGrid.x;
@@ -29,8 +33,9 @@ void main(){
 }`;
 const fragment=`#version 300 es
 precision highp float;
-in vec2 vFace;in vec3 vColor;in float vLight,vHeight,vNoise;out vec4 fragColor;
+in vec2 vFace;in vec3 vColor;in float vLight,vHeight,vNoise,vKeep;out vec4 fragColor;
 void main(){
+ if(vKeep<.5)discard;
  float l=dot(vColor,vec3(.2126,.7152,.0722));
  vec3 shadow=vec3(.055,.003,.009),red=vec3(.66,.065,.018),copper=vec3(1.,.39,.13);
  float face=pow(1.-vFace.y,.65);float side=.58+.42*sin(vFace.x*3.14159);
@@ -38,13 +43,13 @@ void main(){
  vec3 base=mix(shadow,red,tone)*(.45+face*.55)*side*(.65+vLight*.5);
  float cap=1.-smoothstep(.025,.085,vFace.y);base=mix(base,copper*(.4+.6*tone),cap*.4*smoothstep(.15,.85,vNoise));
  float edge=pow(1.-abs(vFace.x*2.-1.),5.);base+=red*edge*.08;
- fragColor=vec4(base,1.);
+ fragColor=vec4(mix(base,vec3(1.,.74,.43),.35),.85);
 }`;
 
 export class DepthCloud {
  constructor(canvas,onStatus=()=>{}) {
   this.canvas=canvas;this.onStatus=onStatus;this.generation=0;this.ready=false;this.busy=false;this.failed=false;this.last=0;this.lastDraw=0;this.maps=0;
-  const gl=this.gl=canvas.getContext('webgl2',{alpha:false,antialias:false});
+  const gl=this.gl=canvas.getContext('webgl2',{alpha:true,premultipliedAlpha:false,antialias:false});
   if(!gl){this.failed=true;onStatus('Depth visual unavailable · showing camera');return}
   const compile=(type,source)=>{const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader};
   const program=this.program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);gl.bindVertexArray(gl.createVertexArray());gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
@@ -101,6 +106,6 @@ export class DepthCloud {
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.textures[1]);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,fw,fh,0,gl.RED,gl.UNSIGNED_BYTE,depths);
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,this.textures[2]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,fw,fh,0,gl.RGBA,gl.UNSIGNED_BYTE,vectors);
   gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.textures[0]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,this.capture);
-  const cols=180,rows=Math.round(cols*height/width);gl.uniform2f(this.uniforms.uGrid,cols,rows);gl.uniform1f(this.uniforms.uAspect,width/height);gl.uniform1f(this.uniforms.uDepth,stretch);gl.uniform1f(this.uniforms.uTime,time*.001);gl.uniform2f(this.uniforms.uSize,this.capture.width,this.capture.height);gl.clearColor(.06,.005,.009,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);c.hidden=false;c.dataset.depthMaps=this.maps;c.dataset.motion=flow.reduce((sum,v,i)=>sum+(i%3===2?v:0),0).toFixed(2);return true;
+  const cols=220,rows=Math.round(cols*height/width);gl.uniform2f(this.uniforms.uGrid,cols,rows);gl.uniform1f(this.uniforms.uAspect,width/height);gl.uniform1f(this.uniforms.uDepth,stretch);gl.uniform1f(this.uniforms.uTime,time*.001);gl.uniform2f(this.uniforms.uSize,this.capture.width,this.capture.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.drawArraysInstanced(gl.TRIANGLES,0,6,cols*rows);c.hidden=false;c.dataset.depthMaps=this.maps;c.dataset.motion=flow.reduce((sum,v,i)=>sum+(i%3===2?v:0),0).toFixed(2);return true;
  }
 }
