@@ -1,5 +1,4 @@
 import {harmonyPitches} from './harmony.js?v=delight-1';
-import {DepthCloud} from './depth-cloud.js?v=traffic-2';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
 import {MotionTracker} from './motion.js?v=traffic-2';
 import {MotionExpression} from './expression.js?v=traffic-2';
@@ -9,7 +8,7 @@ const expression=new MotionExpression();
 let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
 import {fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
-const depthCloud=new DepthCloud($('depth-cloud'),text=>$('depth-status').textContent=text);
+const grainCanvas=document.createElement('canvas'),grainContext=grainCanvas.getContext('2d',{willReadFrequently:true});let lastGrain=0,grainData=null,lastPercussion=-Infinity,percussionStep=0;
 
 let facing='environment',tracked=[],handWorker=null,handReady=false,handBusy=false,lastHandResult=0,lastHandRequest=0,handFailed=false,handResult={landmarks:[]},motionSources=[],recentRegions=[],lastHandPresence=0;const motionCanvas=document.createElement('canvas'),mc=motionCanvas.getContext('2d',{willReadFrequently:true});
 const motionTracker=new MotionTracker(),tracker=new PointTracker(),handCanvas=document.createElement('canvas'),hc=handCanvas.getContext('2d');
@@ -19,7 +18,7 @@ let currentPitch=null;
 let visibleNotes=[];const scheduled=[],reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function status(text){$('status').textContent=text}
 function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);rebuildNotes()}
-function releaseCamera(){depthCloud.reset();tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});lastHandResult=0;lastHandRequest=0;handResult={landmarks:[]};motionSources=[];recentRegions=[];lastHandPresence=0;cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
+function releaseCamera(){tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});lastHandResult=0;lastHandRequest=0;handResult={landmarks:[]};motionSources=[];recentRegions=[];lastHandPresence=0;cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 async function startCamera(){if(cameraBusy||stream)return;cameraBusy=true;const generation=++cameraGeneration;$('camera').disabled=true;status('Opening your camera…');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS and a supported browser');const incoming=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:640},height:{ideal:840}}});if(generation!==cameraGeneration){incoming.getTracks().forEach(t=>t.stop());return}stream=incoming;video.srcObject=stream;await video.play();rebuildNotes();$('camera').hidden=true;status('Move gently. Let the melody bloom.')}catch(error){$('camera').hidden=false;status(error.name==='NotAllowedError'?'Enable camera access in your browser to play.':`Camera unavailable. ${error.message}.`)}finally{cameraBusy=false;$('camera').disabled=false}}
 function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio,2);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d)}new ResizeObserver(resize).observe(canvas);resize();
 function trackingStatus(text){if($('tracking-state').textContent!==text)$('tracking-state').textContent=text}
@@ -48,10 +47,10 @@ function sampleVideo(){if(video.readyState<2)return;
 
 $('camera').onclick=startCamera;
 $('flip-camera').onclick=async()=>{if(cameraBusy)return;stop();releaseCamera();facing=facing==='user'?'environment':'user';points=[];$('play').disabled=true;await startCamera()};
-$('mirror-toggle').onchange=()=>{depthCloud.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
+$('mirror-toggle').onchange=()=>{cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function gradient(w,h,time){const t=reduced?0:time*.00015;ctx.fillStyle='#461329';ctx.fillRect(0,0,w,h);const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#682015');g.addColorStop(.48,'#320f20');g.addColorStop(1,'#090811');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);const ax=w*(.65+Math.sin(t)*.25),ay=h*(.23+Math.cos(t*.8)*.17),r=Math.max(w,h)*.85;const glow=ctx.createRadialGradient(ax,ay,0,ax,ay,r);glow.addColorStop(0,'#71340fb0');glow.addColorStop(.35,'#76241760');glow.addColorStop(1,'#7a241200');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);const pink=ctx.createRadialGradient(w*(.15+Math.sin(t+.8)*.15),h*.7,0,w*.1,h*.7,h*.7);pink.addColorStop(0,'#42152e40');pink.addColorStop(1,'#63214400');ctx.fillStyle=pink;ctx.fillRect(0,0,w,h)}
-function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}const cloudVisible=stream&&depthCloud.update(time,video,drawCamera,threshold,motionSources);ctx.clearRect(0,0,w,h);if(!cloudVisible)gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
+function render(time){const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time)}else gradient(w,h,time);ctx.globalAlpha=1;if(playing&&audio){perform(time);drawNotes(w,h)}drawTracked(w,h);if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
 function drawNotes(w,h){
  const note=visibleNotes[0];if(!note||expression.level<.02)return;
  const x=note.point.x*w,y=note.point.y*h;ctx.strokeStyle='#fff4df66';ctx.lineWidth=.7;
@@ -59,17 +58,18 @@ function drawNotes(w,h){
  ctx.strokeStyle='#fff6e8';ctx.strokeRect(x-5,y-5,10,10);ctx.fillStyle='#fff6e8';ctx.font='9px monospace';
  const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];ctx.fillText(`${names[note.midi%12]}${Math.floor(note.midi/12)-1}`,Math.min(w-30,x+12),Math.max(12,y-10));
 }
-async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('flute-worklet.js?v=instant-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/100;master.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*2.5,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;master.connect(convolver);convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master)}
+async function setupAudio(){if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});await audio.audioWorklet.addModule('flute-worklet.js?v=grain-music-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/100;master.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*2.5,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;master.connect(convolver);convolver.connect(reverbWet);reverbWet.connect(compressor)}await audio.resume();instrument(master)}
 function soundSettings(){return {release:+$('release').value/100,pressure:+$('pressure').value/100,breath:+$('breath').value/100,opening:+$('opening').value/100,body:+$('body').value/100,jet:+$('jet').value/100,vibrato:+$('vibrato').value/100}}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-flute',{outputChannelCount:[2]});output.instrument.connect(output)}return output.instrument}
 function perform(time){
  const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
  if(state.note){const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:pitch(point.y,$('scale').value,1),velocity:state.level,point};const note=candidate;currentPitch=note.midi;visibleNotes=[note,null,null];visibleTick++;lastLiveTime=time;}
+ if(state.note&&time-lastPercussion>Math.max(95,30000/+$('pulse').value)){lastPercussion=time;percussionStep++;instrument(master).port.postMessage({type:'percussion',freq:440*2**((currentPitch-81)/12),level:state.level*.28,kind:percussionStep%5===0?'dust':percussionStep%3===0?'tap':'water',pan:state.point.x*1.4-.7})}
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,harmony:harmonyPitches(currentPitch,$('scale').value).map(midi=>440*2**((midi-69)/12)),harmonyMix:+$('harmony').value/100,params:{...soundSettings(),pressure:Math.min(1,+$('pressure').value/100*(.55+state.level*.65))}});
 }
 function syncPreview(){document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',playing);$('play').setAttribute('aria-label',playing?'Pause instrument':'Play instrument');$('live-state').textContent=playing?'PLAYING':'LIVE'}
-function stop(){playing=false;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
+function stop(){playing=false;lastPercussion=-Infinity;percussionStep=0;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
 $('play').onclick=async()=>{if(playing){stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;playing=true;master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
 $('threshold').oninput=()=>updateThreshold(+$('threshold').value/100);
 $('scale').onchange=()=>{mergeTracking(performance.now())};
@@ -99,5 +99,14 @@ function drawTracked(w,h){
   ctx.fillStyle='#fff6e8';ctx.fillText(`${p.name==='object'?'motion':p.name} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,Math.max(8,Math.min(w-100,x+12)),Math.max(14,y-12));
   if(active){ctx.fillStyle='#fff6e8';ctx.fillRect(x-16,y+13,32*expression.level,2)}
  }
+ ctx.restore();
+}
+
+function drawGrain(w,h,time){
+ if(time-lastGrain>80||!grainData){grainCanvas.width=144;grainCanvas.height=Math.round(144*h/w);drawCamera(grainContext,grainCanvas.width,grainCanvas.height);grainData=grainContext.getImageData(0,0,grainCanvas.width,grainCanvas.height);lastGrain=time}
+ const gw=grainData.width,gh=grainData.height,pixels=grainData.data,sx=w/gw,sy=h/gh;
+ ctx.save();ctx.fillStyle='#080b11';const matrix=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+ ctx.globalAlpha=.18+threshold*.3;
+ for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){const i=(y*gw+x)*4,l=(pixels[i]*.2126+pixels[i+1]*.7152+pixels[i+2]*.0722)/255;if(l<(matrix[(y%4)*4+x%4]+.5)/16){const radius=Math.max(.35,Math.min(sx,sy)*(.16+threshold*.12));ctx.fillRect(x*sx,y*sy,radius*2,radius*2)}}
  ctx.restore();
 }
