@@ -136,3 +136,18 @@ body[data-mode=playing] .relief-carousel{display:none}
 .settings-group select{font:20px ReliefTerminal,monospace;color:#fff;color-scheme:dark;border:1px solid #ffffff60;padding:12px;background:#050505;border-radius:0}
 #settings-panel :focus-visible{outline:1px solid #fff;outline-offset:5px}
 @media(min-width:800px){#settings-panel{padding-left:5vw;padding-right:5vw}.settings-grid{gap:32px}}
+/* Condensed contemporary type replaces the terminal/arcade menu treatment. */
+@font-face{font-family:ReliefCondensed;src:url('fonts/BarlowCondensed-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:ReliefCondensed;src:url('fonts/BarlowCondensed-SemiBold.ttf') format('truetype');font-weight:600;font-style:normal;font-display:swap}
+.relief-carousel{font:600 22px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:2px}
+#settings-panel{font-family:ReliefCondensed,Arial,sans-serif}
+.settings-top{font:500 14px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:2px}
+.settings-top button{font:500 24px/1 ReliefCondensed,Arial,sans-serif}
+#settings-title{font:600 clamp(48px,14vw,84px)/.88 ReliefCondensed,Arial,sans-serif;letter-spacing:-1px;text-transform:uppercase;margin:34px 0}
+.settings-group h2{font:600 28px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:1px}
+.settings-group h2::before{content:''}
+.settings-group label{font:500 20px/1.15 ReliefCondensed,Arial,sans-serif;letter-spacing:.2px}
+.settings-group output{font:500 19px/1 ReliefCondensed,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.settings-group p{font:500 16px/1.4 ReliefCondensed,Arial,sans-serif;color:#999;letter-spacing:.2px}
+.settings-group .model-name{font:600 15px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:2px}
+.settings-group select{font:500 19px ReliefCondensed,Arial,sans-serif}
