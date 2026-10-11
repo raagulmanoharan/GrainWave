@@ -180,3 +180,26 @@ body[data-mode=camera] #capture-loop{display:none}
 #capture-loop[aria-pressed=true] .loop-ring{display:block}
 .loop-ring .loop-ring-track{stroke:#ff792c30;stroke-width:2}
 #loop-progress{stroke:#ff792c;stroke-width:2;stroke-linecap:butt;fill:none}
+
+/* A single hairline margin system; the corner marks are the controls. */
+.stage{--frame-left:max(24px,env(safe-area-inset-left,0px));--frame-right:max(24px,env(safe-area-inset-right,0px));--frame-top:max(24px,env(safe-area-inset-top,0px));--frame-bottom:max(24px,env(safe-area-inset-bottom,0px))}
+.margin-frame{position:absolute;z-index:5;left:var(--frame-left);right:var(--frame-right);top:var(--frame-top);bottom:var(--frame-bottom);border:1px solid #ffffff70;pointer-events:none}
+.margin-frame i{position:absolute;width:10px;height:10px;border:1px solid #fff;background:#090909;}
+.frame-tl{left:-6px;top:-6px}.frame-tr{right:-6px;top:-6px}.frame-bl{left:-6px;bottom:-6px}.frame-br{right:-6px;bottom:-6px}
+.margin-frame .frame-bl{background:#ec3028;border-color:#ec3028}.margin-frame .frame-br{background:#fff}
+body[data-mode=playing] .margin-frame i{display:none}
+#open-settings,#flip-camera,#capture-loop,#play{width:44px;height:44px;border:0;border-radius:0;background:transparent;backdrop-filter:none;transform:none;padding:0;z-index:6}
+#open-settings,#capture-loop{left:calc(var(--frame-left) - 22px);right:auto}
+#flip-camera,#play{right:calc(var(--frame-right) - 22px);left:auto}
+#open-settings,#flip-camera{top:calc(var(--frame-top) - 22px);bottom:auto}
+#capture-loop,#play{bottom:calc(var(--frame-bottom) - 22px);top:auto}
+#open-settings::before,#flip-camera::before,#capture-loop::before,#play::before{content:'';position:absolute;left:17px;top:17px;width:10px;height:10px;box-sizing:border-box;border:1px solid #fff;background:#090909}
+#capture-loop::before{border-color:#ec3028;background:#ec3028}
+#play::before{background:#fff}
+#capture-loop[aria-pressed=true]{background:transparent;border:0;color:#ec3028}
+#open-settings .pixel-icon,#flip-camera .pixel-icon,#capture-loop .pixel-icon,#play .pixel-icon{display:none!important}
+#capture-loop .loop-ring{inset:17px;width:10px;height:10px;transform:none}
+.loop-ring .loop-ring-track{stroke:#ff792c40;stroke-width:1}
+#loop-progress{stroke-width:1}
+#play.layer-ready::before{background:#fff}
+#capture-loop:disabled{opacity:.5}

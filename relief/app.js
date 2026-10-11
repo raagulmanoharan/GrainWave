@@ -1,7 +1,7 @@
 import {GrainProcessor} from './grain-process.js?v=fine-1';
 import {AmbientBed} from './ambient.js?v=fine-1';
 let ambientBed=null;
-import {LandingType} from './landing-type.js?v=ring-1';
+import {LandingType} from './landing-type.js?v=frame-1';
 const landingType=new LandingType();
 import {drawPosterPaths} from './poster-paths.js?v=fine-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
