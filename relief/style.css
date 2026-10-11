@@ -252,3 +252,18 @@ body[data-mode=camera] #open-settings,body[data-mode=camera] #flip-camera,body[d
 #live-layer{position:absolute;z-index:6;right:var(--frame-right);bottom:calc(var(--frame-bottom) + var(--grid-cell));font-size:30px}
 body:has(#loop-tools:not([hidden])) #live-layer{bottom:calc(var(--frame-bottom) + var(--grid-cell)*5)}
 body[data-mode=camera] #loop-stack,body[data-mode=camera] #loop-tools,body[data-mode=camera] #live-layer{display:none}
+
+/* Stable live/capture flow, using centered pixel labels only. */
+.loop-block,#loop-tools button,#live-layer,.capture-label{font:400 clamp(14px,4vw,19px)/1 ReliefPixel,monospace;letter-spacing:0;text-align:center}
+.loop-block span,#loop-tools button,#live-layer{display:grid;place-items:center}
+#capture-loop .pixel-icon{display:none!important}
+#capture-loop .capture-label{position:relative;z-index:1;pointer-events:none}
+#live-layer,body:has(#loop-tools:not([hidden])) #live-layer{bottom:calc(var(--frame-bottom) + var(--grid-cell))}
+#loop-tools{bottom:calc(var(--frame-bottom) + var(--grid-cell)*2)}
+#live-layer[aria-pressed=true]{color:#ff792c;border-color:#ff792c70}
+#loop-flow{position:absolute;z-index:5;bottom:calc(var(--frame-bottom) + var(--grid-cell) + 10px);left:calc(var(--frame-left) + var(--grid-cell) + 8px);right:calc(var(--frame-right) + var(--grid-cell) + 8px);margin:0;text-align:center;font:400 10px/1.4 ReliefPixel,monospace;color:#ffffff90;pointer-events:none}
+body[data-mode=camera] #loop-flow{display:none}
+
+#play .pixel-icon{display:none!important}
+#play-label{position:relative;z-index:1;font:400 clamp(14px,4vw,19px)/1 ReliefPixel,monospace;text-align:center}
+#play.playing .icon-pause,#play.layer-ready .icon-plus,#capture-loop[aria-pressed=true] .icon-loop{display:none!important}
