@@ -151,3 +151,9 @@ body[data-mode=playing] .relief-carousel{display:none}
 .settings-group p{font:500 16px/1.4 ReliefCondensed,Arial,sans-serif;color:#999;letter-spacing:.2px}
 .settings-group .model-name{font:600 15px/1 ReliefCondensed,Arial,sans-serif;letter-spacing:2px}
 .settings-group select{font:500 19px ReliefCondensed,Arial,sans-serif}
+
+.relief-carousel{font:400 clamp(15px,4.5vw,23px)/1 ReliefPixel,monospace;letter-spacing:.5px;padding:6px 0;background:#05050580}
+.relief-carousel.ticker-top{top:calc(env(safe-area-inset-top,0px) + 4px);bottom:auto}
+.relief-carousel.ticker-bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 4px);top:auto}
+.ticker-top>div{animation-duration:23s;animation-delay:-9s;animation-direction:reverse}
+.ticker-bottom>div{animation-duration:34s;animation-delay:-4s}

@@ -14,7 +14,7 @@ export class LandingType{
   const project=(point,index)=>{const [x,y,z]=point,rx=x*Math.cos(angle)+z*Math.sin(angle),rz=z*Math.cos(angle)-x*Math.sin(angle),tilt=.27,ry=y*Math.cos(tilt)-rz*Math.sin(tilt),depth=y*Math.sin(tilt)+rz*Math.cos(tilt);const length=1+burst*(1.5+(index%13)/5);return {x:w/2+rx*radius*length,y:h/2+ry*radius*length,z:depth}};
   ctx.lineWidth=.65;ctx.setLineDash([]);
   this.edges.forEach(([a,b],i)=>{const u=project(a,i),v=project(b,i);ctx.globalAlpha=(u.z+v.z>0?.5:.2)*(this.open?Math.min(1,p*3):1-p);ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(v.x,v.y);if(burst>.06){const length=1+burst*2;ctx.lineTo(w/2+(v.x-w/2)*length,h/2+(v.y-h/2)*length)}ctx.stroke()});
-  const targetW=w*.94,targetH=h*.8,left=(w-targetW)/2,top=(h-targetH)/2;
+  const targetW=w*.96,targetH=h*.88,left=(w-targetW)/2,top=(h-targetH)/2;
   ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=this.open?Math.min(1,p*3):1;
   if(!this.open){const bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];ctx.beginPath();for(let y=top;y<top+targetH;y+=6)for(let x=left;x<left+targetW;x+=6){const ix=Math.floor((x-left)/6),iy=Math.floor((y-top)/6);if(bayer[(iy%4)*4+ix%4]/16>=p)ctx.rect(x,y,6,6)}ctx.clip()}
   ctx.drawImage(this.title,left,top,targetW,targetH);ctx.restore();
