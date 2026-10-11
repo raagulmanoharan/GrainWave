@@ -239,3 +239,6 @@ body[data-mode=playing] .margin-frame i{display:none}
 .margin-frame .grid-col-left,.margin-frame .grid-col-right,.margin-frame .grid-row-top,.margin-frame .grid-row-bottom{background:#ffffff0d}
 body[data-mode=camera] .margin-frame i{display:none}
 body[data-mode=camera] #open-settings,body[data-mode=camera] #flip-camera,body[data-mode=camera] #capture-loop,body[data-mode=camera] #play{display:none}
+
+/* Edge-aligned cells, with only device safe-area clearance. */
+.stage{--frame-left:env(safe-area-inset-left,0px);--frame-right:env(safe-area-inset-right,0px);--frame-top:env(safe-area-inset-top,0px);--frame-bottom:env(safe-area-inset-bottom,0px)}
