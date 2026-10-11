@@ -354,3 +354,19 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 @media(prefers-reduced-motion:reduce){#settings-panel,#settings-panel.closing{animation:none}}
 
 .settings-about canvas{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated}
+/* Quiet settings type, with an expressive signature inside the same grid. */
+#settings-panel{font-family:Arial,"Helvetica Neue",sans-serif}
+.settings-top{font:500 12px/1 Arial,"Helvetica Neue",sans-serif;letter-spacing:.08em}
+#settings-title{font:500 30px/1 Arial,"Helvetica Neue",sans-serif;letter-spacing:-1px;padding-left:calc(var(--grid-cell) + 14px)}
+.settings-grid{margin-left:var(--grid-cell);margin-right:var(--grid-cell)}
+.settings-group h2,.settings-about h2{font:500 11px/1 Arial,"Helvetica Neue",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.settings-group label{font:400 13px/1.4 Arial,"Helvetica Neue",sans-serif;letter-spacing:-.15px;display:grid;grid-template-columns:1fr auto}
+.settings-group label>input[type=range],.settings-group label>span{grid-column:1/-1}
+.settings-group output{font:400 12px/1.4 Arial,"Helvetica Neue",sans-serif}
+.settings-group .switch-row{display:flex}
+#settings-flip-camera{font:500 11px/1 Arial,"Helvetica Neue",sans-serif;letter-spacing:.06em}
+.settings-about figure{aspect-ratio:3/4}
+.settings-about canvas,.settings-about img{object-fit:cover;object-position:50% 67%;transform:scale(1.24)}
+.settings-about figcaption{inset:0;padding:12px;display:flex;align-items:center;justify-content:center;text-align:center;background:#00000018;color:#ff453a;font:italic 600 clamp(30px,9vw,46px)/.88 ReliefSerif,Georgia,serif;letter-spacing:-1.5px;white-space:pre-line}
+.settings-about p{font:400 12px/1.6 Arial,"Helvetica Neue",sans-serif;text-align:center;letter-spacing:-.1px}
+#settings-panel{--grid-cell:clamp(56px,16vw,80px)}
