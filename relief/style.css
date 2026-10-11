@@ -72,3 +72,7 @@ body[data-mode=camera] .stage::after{background:none}
 .landing-tagline{margin-top:0}
 
 .relief-name{padding-right:.24em}
+
+body[data-mode=camera] .visual-instruction{top:14%;left:12px;right:12px}
+.landing-poster{display:block;width:100%;height:auto;max-height:73svh;object-fit:contain;object-position:left top}
+@media(min-width:700px){body[data-mode=camera] .visual-instruction{left:6vw;right:auto;width:560px}}

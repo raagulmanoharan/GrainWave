@@ -1,6 +1,4 @@
-import {pixelPosterType} from './poster-type.js?v=poster-6';
-pixelPosterType();
-import {drawPosterPaths} from './poster-paths.js?v=poster-6';
+import {drawPosterPaths} from './poster-paths.js?v=poster-7';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
