@@ -32,11 +32,11 @@ body[data-mode=camera] .stage::after{background:rgba(0,0,0,.2)}
 .landing-title{margin:0;max-width:680px;font:600 64px/.9 ReliefSerif,Georgia,serif;letter-spacing:-.04em;font-kerning:normal;font-feature-settings:'kern' 1,'liga' 1;text-rendering:optimizeLegibility}
 .landing-title .title-line{display:block;white-space:nowrap}
 .line-one{font-size:clamp(82px,33vw,168px);line-height:.8;letter-spacing:-.045em}
-.line-two{font-size:clamp(98px,38vw,196px);line-height:.82;letter-spacing:-.065em;margin-left:10px}
+.line-two{font-size:clamp(98px,40vw,196px);line-height:.82;letter-spacing:-.065em;margin-left:10px;margin-top:clamp(-26px,-5.1vw,-16px)}
 .line-two em{font:inherit;font-style:italic;letter-spacing:inherit}
 .pixel-letter{font:400 .94em/1 ReliefPixel,monospace;letter-spacing:-.1em;margin-right:.015em}
-.line-three{font-size:clamp(66px,25.5vw,132px);line-height:.88;letter-spacing:-.055em}
-.landing-description{position:fixed;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);font:11px/1.4 Arial,sans-serif;margin:0;letter-spacing:.15px;max-width:min(210px,calc(100vw - 132px))}
+.line-three{font-size:clamp(66px,30vw,156px);line-height:.88;letter-spacing:-.055em;margin-top:clamp(-35px,-7vw,-22px)}
+.landing-description{position:static;font:italic 600 18px/1.12 ReliefSerif,Georgia,serif;margin:8px 0 0;letter-spacing:-.2px;max-width:280px}
 .landing-signature{position:fixed;right:20px;top:51%;writing-mode:vertical-rl;font:9px/1 Arial,sans-serif;letter-spacing:4px}
 body[data-mode=playing] .visual-instruction{display:none}
 .centre-play{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:auto;right:max(24px,calc(env(safe-area-inset-right,0px) + 12px));transform:none;width:64px;height:64px;border:1px solid #fff;border-radius:50%;background:#fff;color:#090909;display:grid;place-items:center}
@@ -46,8 +46,10 @@ body[data-mode=playing] .visual-instruction{display:none}
 .gesture-guide{bottom:calc(env(safe-area-inset-bottom,0px) + 42px);left:24px;transform:none}body[data-mode=camera] .gesture-guide{display:none}
 #settings-panel{padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 40px)}
 button:focus-visible{outline:2px solid #fff;outline-offset:6px}
-@media(min-width:700px){.visual-instruction{left:6vw;top:22%}#open-settings{left:6vw}.flip-camera,.centre-play{right:6vw}.landing-description{font-size:12px;max-width:250px;left:6vw}}
-@media(max-height:650px) and (max-width:699px){.visual-instruction{top:23%}.landing-description{font-size:10px}}
+@media(min-width:700px){.visual-instruction{left:6vw;top:22%}#open-settings{left:6vw}.flip-camera,.centre-play{right:6vw}.landing-description{font-size:22px;max-width:340px}}
+@media(max-height:650px) and (max-width:699px){.visual-instruction{top:23%}.landing-description{font-size:16px;margin-top:8px}}
 @media(prefers-reduced-motion:reduce){#settings-panel{animation:none}}
 .line-three .pixel-letter{font-size:1em}
 #open-settings,.flip-camera{background:#09090955}
+.camera-fallback{bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}.camera-fallback button{border-radius:999px;min-height:44px}
+body:has(#camera:not([hidden])) #status{top:calc(env(safe-area-inset-top,0px) + 82px);bottom:auto;right:24px}
