@@ -52,9 +52,9 @@ button:focus-visible{outline:2px solid #fff;outline-offset:6px}
 body:has(#camera:not([hidden])) #status{top:calc(env(safe-area-inset-top,0px) + 82px);bottom:auto;right:24px}
 
 /* Oversized edition numeral sits behind the stepped red typography. */
-.poster-edition{position:fixed;inset:17% -3% auto -4%;z-index:-1;color:#080808;font:400 clamp(360px,110vw,760px)/1 ReliefPixel,monospace;letter-spacing:-.15em;white-space:nowrap;transform:scaleY(1.35);transform-origin:top left}
+.poster-edition{position:fixed;inset:17% -3% auto -4%;z-index:-1;color:#fff;font:400 clamp(360px,110vw,760px)/1 ReliefPixel,monospace;letter-spacing:-.15em;white-space:nowrap;transform:scaleY(1.35);transform-origin:top left}
 body[data-mode=camera] .visual-instruction{isolation:isolate;top:20%}
-body[data-mode=camera] .stage::after{background:rgba(148,194,200,.72)}
+body[data-mode=camera] .stage::after{background:none}
 .landing-title{font-size:clamp(90px,30vw,180px);line-height:.95;letter-spacing:-.055em}
 .relief-name{padding:0 .16em .04em .045em}
 .landing-tagline{margin-top:18px;margin-left:12%;max-width:78%;font-size:clamp(42px,13vw,80px);line-height:.95}
@@ -63,3 +63,12 @@ body[data-mode=camera] .stage::after{background:rgba(148,194,200,.72)}
 
 .visual-instruction .landing-tagline em{font:inherit;font-style:italic;letter-spacing:inherit;background:#ff3b2f;display:inline-block;line-height:.95;padding:.02em .13em .12em}
 .landing-tagline em:last-child{margin-left:18%;margin-top:-2px}
+
+.landing-title{font-size:clamp(92px,30vw,180px)}
+.landing-tagline{font-size:clamp(30px,9vw,54px);margin-top:12px;margin-left:16%;max-width:80%}
+.relief-name,.visual-instruction .landing-tagline em{position:relative;color:transparent}
+.relief-name canvas,.landing-tagline em canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+
+.landing-tagline{margin-top:0}
+
+.relief-name{padding-right:.24em}
