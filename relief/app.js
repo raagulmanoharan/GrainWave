@@ -133,7 +133,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();rel
 function setBudget(value){noteBudget=Math.max(1,Math.min(24,Math.round(value)));$('notes-out').textContent=noteBudget;rebuildNotes()}
 $('note-budget').oninput=()=>setBudget(+$('note-budget').value);
 $('pulse').oninput=()=>{if(delay&&audio)delay.delayTime.setTargetAtTime(60/+$('pulse').value/2,audio.currentTime,.1)};
-$('open-settings').onclick=()=>$('settings-panel').showModal();document.querySelector('[data-close]').onclick=()=>$('settings-panel').close();
+$('open-settings').onclick=()=>$('settings-panel').showModal();document.querySelector('[data-close]').onclick=()=>{const panel=$('settings-panel');panel.classList.add('closing');setTimeout(()=>{panel.close();panel.classList.remove('closing')},220)};
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
 $('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
 setBudget(10);
