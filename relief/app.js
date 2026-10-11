@@ -186,3 +186,8 @@ const onboarding=new Onboarding({onOpen:()=>{landingType.setPlaying(true);status
 $('flip-camera').onclick=()=>onboarding.open();
 canvas.addEventListener('click',async()=>{if(playing||audioStarting||onboarding.active)return;if(!onboarding.seen){onboarding.open();return}if(!stream)await startCamera();if(stream)$('play').click()});
 canvas.addEventListener('keydown',e=>{if(!playing&&(e.key==='Enter'||e.key===' ')){e.preventDefault();canvas.click()}});
+
+// Use the same threshold grain treatment as the guide artwork.
+const aboutPhoto=document.querySelector('.settings-about img');
+function ditherAboutPhoto(){if(!aboutPhoto.naturalWidth)return;const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.drawImage(aboutPhoto,0,0,640,480);const frame=x.getImageData(0,0,640,480);new GrainProcessor().process({data:frame.data,width:640,height:480,drive:.8,settled:.3,threshold:.48,playing:true,boxes:[{x:0,y:0,w:1,h:1}]});x.putImageData(frame,0,0);c.setAttribute('role','img');c.setAttribute('aria-label',aboutPhoto.alt);aboutPhoto.hidden=true;aboutPhoto.after(c)}
+if(aboutPhoto.complete)ditherAboutPhoto();else aboutPhoto.addEventListener('load',ditherAboutPhoto,{once:true});
