@@ -9,7 +9,6 @@ export class Onboarding{
  constructor({onOpen,onFinish}){this.onOpen=onOpen;this.onFinish=onFinish;this.panel=document.getElementById('onboarding');this.index=0;this.active=false;this.images=[1,1,2,3].map((n,index)=>{const image=new Image();image.alt='';image.decoding='async';image.onload=()=>{if(this.index===index)this.drawImage()};image.src=`onboarding/slide-${n}.png`;return image});this.seen=false;try{this.seen=localStorage.getItem(key)==='done'}catch{}
  document.getElementById('tour-next').onclick=()=>this.index===slides.length-1?this.finish():this.show(this.index+1);
  document.getElementById('tour-back').onclick=()=>this.show(this.index-1);
- document.getElementById('tour-skip').onclick=()=>this.finish();
  document.getElementById('tour-close').onclick=()=>this.finish();
  document.addEventListener('keydown',e=>{if(!this.active)return;if(e.key==='ArrowRight'){e.preventDefault();document.getElementById('tour-next').click()}if(e.key==='ArrowLeft'&&this.index){e.preventDefault();this.show(this.index-1)}if(e.key==='Escape')this.finish()});
  }
