@@ -1,4 +1,4 @@
-import {Onboarding} from './onboarding.js?v=tour-fast-1';
+import {Onboarding} from './onboarding.js?v=tour-context-1';
 import {GrainProcessor} from './grain-process.js?v=fine-1';
 import {AmbientBed} from './ambient.js?v=arrival-1';
 let ambientBed=null;
