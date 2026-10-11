@@ -15,7 +15,7 @@ import {MotionEcho} from './motion-echo.js?v=drive-1';
 import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
 import {complementaryPitch} from './layer-harmony.js?v=rack-1';
-import {loopStatus} from './loop-status.js?v=voice-1';
+import {loopStatus} from './loop-status.js?v=voice-2';
 const loopColors=['#ff453a','#ffd60a','#0a84ff','#30d158'];
 let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
 import {LoopRack} from './note-buffer.js?v=rack-1';
