@@ -13,10 +13,10 @@ export class MotifSong {
    if(!this.learned){this.motif=[...this.pending];this.learned=true}else{this.motif[this.replace%4]=this.pending[this.replace%4];this.replace++}
    this.lastCommit=step;this.pending=[];
   }
-  if(this.stopStep<0||step>=this.stopStep)return [];
+  if(!this.seeded)return [];
   this.energy=Math.max(energy,this.energy*.985);
-  const remaining=this.stopStep-step,gain=energy>.02?1:Math.min(1,remaining/8)*.65;
-  return arrangementStep(step,{energy:this.energy,motif:this.motif}).map(e=>({...e,level:e.level*gain*.42}));
+  const idle=energy<=.02,gain=idle?.6:1;
+  return arrangementStep(step,{energy:this.energy,motif:this.motif}).filter(e=>!idle||e.kind==='bell'||e.kind==='bass').map(e=>({...e,level:e.level*gain*.42}));
  }
 }
 export function arrangementStep(step,{energy=.3,motif=[57,62,64,60]}={}){
