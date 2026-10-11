@@ -7,7 +7,7 @@ export class AmbientBed{
   const delay=ctx.createDelay(3),feedback=ctx.createGain(),damp=ctx.createBiquadFilter(),echo=ctx.createGain();delay.delayTime.value=1.37;feedback.gain.value=.56;damp.type='lowpass';damp.frequency.value=950;echo.gain.value=.42;filter.connect(delay);delay.connect(damp);damp.connect(feedback);feedback.connect(delay);delay.connect(echo);echo.connect(this.bus);
   this.lfo=ctx.createOscillator();const depth=ctx.createGain();this.lfo.frequency.value=.035;depth.gain.value=650;this.lfo.connect(depth);depth.connect(filter.frequency);this.lfo.start();
  }
- start(){this.bus.gain.cancelScheduledValues(this.ctx.currentTime);this.bus.gain.setTargetAtTime(.65,this.ctx.currentTime,1.5);this.next=this.ctx.currentTime;this.advance()}
+ start(){if(this.next!==Infinity)return;this.bus.gain.cancelScheduledValues(this.ctx.currentTime);this.bus.gain.setTargetAtTime(.65,this.ctx.currentTime,1.5);this.next=this.ctx.currentTime;this.advance()}
  stop(){this.bus.gain.setTargetAtTime(0,this.ctx.currentTime,.3);this.next=Infinity;for(const voice of this.voices){try{voice.stop(this.ctx.currentTime+.5)}catch{}}this.voices=[]}
  advance(){const now=this.ctx.currentTime;if(now<this.next)return;this.next=now+12+Math.random()*6;
   const voicings=[[45,52,60,64,71],[45,55,62,64,69],[45,52,59,62,72]],chord=voicings[Math.floor(Math.random()*voicings.length)];
