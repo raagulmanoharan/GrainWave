@@ -51,7 +51,8 @@ export class PhraseComposer {
 const degrees=[0,3,5,7,10];
 export const degreePitch=d=>57+12*Math.floor(d/5)+degrees[((d%5)+5)%5];
 export class PhraseSong {
- constructor(random=Math.random){
+ constructor(random=Math.random,{generative=false}={}){
+  this.generative=generative;this.previousDegree=null;
   this.random=random;this.lastMutation=-1;
   const choose=a=>a[Math.floor(random()*a.length)];
   const a=choose([[0,2,3,2],[0,1,2,1],[2,3,4,3]]),b=choose([[1,2,1,0],[3,2,1,2],[2,4,3,2]]);
@@ -62,7 +63,15 @@ export class PhraseSong {
   if(time-this.lastTrigger<85)return null;
   // Change register only at phrase boundaries, never scramble a phrase mid-flight.
   if(this.index%16===0)this.transpose=y<.3?2:y>.7?-2:0;
-  const midi=degreePitch(this.phrase[this.index%16]+this.transpose);
+  let degree=this.phrase[this.index%16]+this.transpose;
+  if(this.generative){
+   const previous=this.previousDegree;
+   const target=this.phrase[this.index%16]+this.transpose+(this.random()<.5?-1:1);
+   const options=Array.from({length:10},(_,i)=>i-2).filter(d=>d!==previous&&(previous===null||Math.abs(d-previous)<=2));
+   degree=options.reduce((best,d)=>Math.abs(d-target)<Math.abs(best-target)?d:best,options[0]);
+   this.previousDegree=degree;
+  }
+  const midi=degreePitch(degree);
   this.triggers.push(time);this.triggers=this.triggers.filter(t=>time-t<800);this.index++;this.seeded=true;this.lastTrigger=time;this.lastMotion=time;this.loopOrigin=null;return midi;
  }
  advance(time,energy,sources=0){
