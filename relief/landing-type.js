@@ -1,24 +1,22 @@
-const fonts=[['R','ReliefBlackletter','normal',400],['E','ReliefSerif','italic',600],['L','Arial','normal',400],['I','ReliefSerif','normal',600],['E','ReliefPixel','normal',400],['F','Georgia','normal',400]];
+// Real pixel-serif typography with an independently animated wireframe globe.
 export class LandingType{
- constructor(){this.canvas=document.getElementById('landing-type');this.ctx=this.canvas.getContext('2d');this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.open=true;this.start=performance.now();this.ready=false;Promise.all([document.fonts.load('80px ReliefBlackletter'),document.fonts.load('600 80px ReliefSerif'),document.fonts.load('italic 600 80px ReliefSerif'),document.fonts.load('80px ReliefPixel')]).then(()=>document.fonts.ready).then(()=>{this.ready=true;this.start=performance.now();this.tick()});window.addEventListener('resize',()=>{this.resize();if(this.ready&&!this.frame)this.tick()});this.resize()}
+ constructor(){this.canvas=document.getElementById('landing-type');this.ctx=this.canvas.getContext('2d');this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.open=true;this.start=performance.now();this.ready=false;this.frame=null;this.edges=[];
+  for(let lat=-3;lat<=3;lat++){for(let j=0;j<48;j++)this.edges.push([this.point(lat*Math.PI/8,j*Math.PI/24),this.point(lat*Math.PI/8,(j+1)*Math.PI/24)])}
+  for(let lon=0;lon<12;lon++){for(let j=0;j<32;j++)this.edges.push([this.point(-Math.PI/2+j*Math.PI/32,lon*Math.PI/6),this.point(-Math.PI/2+(j+1)*Math.PI/32,lon*Math.PI/6)])}
+  document.fonts.load('100px ReliefPixelSerif').then(()=>{this.ready=true;this.start=performance.now();this.tick()});window.addEventListener('resize',()=>this.resize());this.resize()}
+ point(lat,lon){return [Math.cos(lat)*Math.cos(lon),Math.sin(lat),Math.cos(lat)*Math.sin(lon)]}
  resize(){this.w=innerWidth;this.h=innerHeight;this.d=Math.min(devicePixelRatio,2);this.canvas.width=this.w*this.d;this.canvas.height=this.h*this.d}
  setPlaying(playing){this.open=!playing;this.start=performance.now();this.canvas.hidden=false;if(this.ready&&!this.frame)this.tick()}
- tick=()=>{this.frame=null;const elapsed=performance.now()-this.start,duration=this.reduced?1:850,p=Math.min(1,elapsed/duration),ease=1-(1-p)**3,spread=this.open?ease:1-ease;
- const {ctx,w,h,d}=this;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
- if(!this.open&&p===1){this.canvas.hidden=true;return}
- // Fit visible ink, not em boxes: every glyph has the same optical height.
- const measure=height=>fonts.map(([char,family,style,weight])=>{
-  ctx.font=`${style} ${weight} 100px ${family}`;const base=ctx.measureText(char),size=100*height/(base.actualBoundingBoxAscent+base.actualBoundingBoxDescent);
-  const font=`${style} ${weight} ${size}px ${family}`;ctx.font=font;const m=ctx.measureText(char);
-  return {char,font,width:m.actualBoundingBoxLeft+m.actualBoundingBoxRight,left:m.actualBoundingBoxLeft,ascent:m.actualBoundingBoxAscent,height:m.actualBoundingBoxAscent+m.actualBoundingBoxDescent};
- });
- let height=Math.min(w*.23,160),glyphs=measure(height),gap=height*.012;
- let width=glyphs.reduce((n,g)=>n+g.width,0)+gap*(glyphs.length-1);
- if(width>w*.91){height*=w*.91/width;glyphs=measure(height);gap=height*.012;width=glyphs.reduce((n,g)=>n+g.width,0)+gap*(glyphs.length-1)}
- const top=(h-height)/2,spacing=Math.min(h*.14,height*1.65);
- ctx.save();
- if(!this.open&&p>.58){const dissolve=(p-.58)/.42,bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];ctx.beginPath();for(let y=0;y<h;y+=5)for(let x=0;x<w;x+=5){if(bayer[(y/5%4)*4+(x/5%4)]/16>=dissolve)ctx.rect(x,y,5,5)}ctx.clip()}
- for(let row=-3;row<=3;row++){ctx.globalAlpha=row===0?1:(.38-Math.abs(row)*.055)*Math.min(1,spread*3);ctx.strokeStyle='#fff';ctx.fillStyle='#fff';ctx.lineWidth=.8;ctx.textBaseline='alphabetic';let x=(w-width)/2;for(const glyph of glyphs){ctx.font=glyph.font;if(row===0)ctx.fillText(glyph.char,x+glyph.left,top+glyph.ascent);else ctx.strokeText(glyph.char,x+glyph.left,top+glyph.ascent+row*spacing*spread);x+=glyph.width+gap}}
- ctx.restore();if(p<1)this.frame=requestAnimationFrame(this.tick)
+ tick=()=>{this.frame=null;const now=performance.now(),p=Math.min(1,(now-this.start)/(this.reduced?1:950)),{ctx,w,h,d}=this;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
+  if(!this.open&&p===1){this.canvas.hidden=true;return}
+  const angle=this.reduced?0:now*.00015,radius=Math.min(w*.46,h*.27),burst=this.open?0:p*p;
+  const project=(point,index)=>{const [x,y,z]=point,rx=x*Math.cos(angle)+z*Math.sin(angle),rz=z*Math.cos(angle)-x*Math.sin(angle),tilt=.27,ry=y*Math.cos(tilt)-rz*Math.sin(tilt),depth=y*Math.sin(tilt)+rz*Math.cos(tilt);const length=1+burst*(1.5+(index%13)/5);return {x:w/2+rx*radius*length,y:h/2+ry*radius*length,z:depth}};
+  ctx.lineWidth=.65;ctx.setLineDash([]);
+  this.edges.forEach(([a,b],i)=>{const u=project(a,i),v=project(b,i);ctx.globalAlpha=(u.z+v.z>0?.5:.2)*(this.open?Math.min(1,p*3):1-p);ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(v.x,v.y);if(burst>.06){const length=1+burst*2;ctx.lineTo(w/2+(v.x-w/2)*length,h/2+(v.y-h/2)*length)}ctx.stroke()});
+  ctx.globalAlpha=this.open?Math.min(1,p*3):Math.max(0,1-p*1.5);
+  // Stretch real bitmap-serif glyphs by their visible bounds, preserving crisp pixels.
+  ctx.font='400 100px ReliefPixelSerif';ctx.textBaseline='alphabetic';const text='RELIEF',m=ctx.measureText(text),inkHeight=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent,targetW=w*.88,targetH=h*.78;
+  ctx.save();ctx.translate((w-targetW)/2,(h-targetH)/2);ctx.scale(targetW/(m.actualBoundingBoxLeft+m.actualBoundingBoxRight),targetH/inkHeight);ctx.fillStyle='#fff';ctx.fillText(text,m.actualBoundingBoxLeft,m.actualBoundingBoxAscent);ctx.restore();
+  ctx.globalAlpha=1;if(this.open||p<1)this.frame=requestAnimationFrame(this.tick)
  }
 }

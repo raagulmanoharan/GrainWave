@@ -96,3 +96,5 @@ body[data-mode=camera] .stage::after{background:rgba(0,0,0,.9)}
 #play,#open-settings,#flip-camera{z-index:4}
 
 .visual-instruction{height:1px}
+
+@font-face{font-family:ReliefPixelSerif;src:url('fonts/Jacquard24-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
