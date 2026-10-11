@@ -273,3 +273,17 @@ body[data-mode=camera] #loop-flow{display:none}
 #loop-flow{bottom:var(--frame-bottom);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:var(--grid-cell);display:grid;place-items:center;padding:0 8px;color:#ffffff90;text-align:center}
 #status{bottom:var(--frame-bottom);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:var(--grid-cell);max-width:none;margin:0;display:grid;place-items:center;padding:0 8px;text-align:center;font:400 10px/1.4 ReliefPixel,monospace}
 .stage:has(#status:not(:empty)) #loop-flow{visibility:hidden}
+
+/* Fixed add-live corner; selected-loop controls share its color and guide. */
+#live-layer,body:has(#loop-tools:not([hidden])) #live-layer{bottom:var(--frame-bottom);background:#fff;color:#090909;border:1px solid #fff}
+#live-layer[aria-pressed=true]{color:#090909;border-color:#fff}
+#loop-tools{bottom:calc(var(--frame-bottom) + var(--grid-cell))}
+#loop-tools #play{position:relative;inset:auto;width:var(--grid-cell);height:var(--grid-cell);background:color-mix(in srgb,var(--selected-loop-color) 12%,#080808);color:var(--selected-loop-color);border:1px solid color-mix(in srgb,var(--selected-loop-color) 45%,transparent)}
+#loop-tools #play::before{display:none}
+.loop-block{color:var(--loop-color);border-color:color-mix(in srgb,var(--loop-color) 45%,transparent);background:color-mix(in srgb,var(--loop-color) 10%,#080808)}
+.loop-block.selected{color:var(--loop-color);border-color:var(--loop-color);background:color-mix(in srgb,var(--loop-color) 25%,#080808)}
+.loop-block.paused{color:color-mix(in srgb,var(--loop-color) 45%,#080808)}
+.loop-block i{background:var(--loop-color)}
+#loop-tools button{color:var(--selected-loop-color);border-color:color-mix(in srgb,var(--selected-loop-color) 45%,transparent);background:color-mix(in srgb,var(--selected-loop-color) 12%,#080808)}
+#loop-link{position:absolute;z-index:5;left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));height:1px;background:color-mix(in srgb,var(--selected-loop-color) 20%,transparent);pointer-events:none}
+body[data-mode=camera] #loop-link{display:none}
