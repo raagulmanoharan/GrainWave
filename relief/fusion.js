@@ -1,0 +1,4 @@
+import {fingertips} from './tracking.js';
+export function handRegions(result){return (result.landmarks||[]).map(hand=>{const xs=hand.map(p=>p.x),ys=hand.map(p=>p.y),x=Math.min(...xs)-.04,y=Math.min(...ys)-.04;return {x,y,w:Math.max(...xs)-x+.04,h:Math.max(...ys)-y+.04}})}
+export function overlapsHand(object,regions){return regions.some(hand=>{if(object.x>=hand.x&&object.x<=hand.x+hand.w&&object.y>=hand.y&&object.y<=hand.y+hand.h)return true;if(!object.box)return false;const box=object.box,overlapW=Math.max(0,Math.min(box.x+box.w,hand.x+hand.w)-Math.max(box.x,hand.x)),overlapH=Math.max(0,Math.min(box.y+box.h,hand.y+hand.h)-Math.max(box.y,hand.y));return overlapW*overlapH/(box.w*box.h||1)>.3})}
+export function fuseSources(handResult,objects,recentRegions=[]){const regions=[...handRegions(handResult),...recentRegions],fingers=fingertips(handResult);return {regions,points:[...fingers,...objects.filter(p=>!overlapsHand(p,regions))]}}
