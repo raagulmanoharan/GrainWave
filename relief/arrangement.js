@@ -8,14 +8,14 @@ export class MotifSong {
   if(slot===this.lastSlot)return;this.lastSlot=slot;
   if(this.pending.at(-1)!==midi)this.pending.push(midi);if(this.pending.length>4)this.pending.shift();
  }
- events(step,energy){
+ events(step,energy,{loop=false}={}){
   if(step%32===0&&this.pending.length===4&&(!this.learned||step-this.lastCommit>=128)){
    if(!this.learned){this.motif=[...this.pending];this.learned=true}else{this.motif[this.replace%4]=this.pending[this.replace%4];this.replace++}
    this.lastCommit=step;this.pending=[];
   }
   if(!this.seeded)return [];
   this.energy=Math.max(energy,this.energy*.985);
-  const idle=energy<=.02,gain=idle?.6:1;
+  const idle=energy<=.02,gain=idle?.6:1;if(idle&&!loop)return [];
   return arrangementStep(step,{energy:this.energy,motif:this.motif}).filter(e=>!idle||e.kind==='bell'||e.kind==='bass').map(e=>({...e,level:e.level*gain*.42}));
  }
 }
