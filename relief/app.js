@@ -85,6 +85,19 @@ setBudget(10);
 initMotion();initHands();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
 function drawTracked(w,h){
- const lead=tracked.slice(0,3);
- for(const p of lead){const x=p.x*w,y=p.y*h,flash=p.flashUntil>performance.now();ctx.strokeStyle=flash?'#fff6e8':'#f4dbad88';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-4,y);ctx.lineTo(x+4,y);ctx.moveTo(x,y-4);ctx.lineTo(x,y+4);ctx.stroke();ctx.fillStyle='#fff6e833';ctx.fillRect(x-16,y+12,32,2);ctx.fillStyle='#f4dbad';ctx.fillRect(x-16,y+12,32*expression.level,2)}
+ const sources=tracked.slice(0,10);
+ ctx.save();ctx.lineWidth=1;ctx.font='10px Helvetica, Arial, sans-serif';
+ const anchor=sources.find(p=>p.id===expression.point.id)||sources[0];
+ if(anchor){ctx.strokeStyle='#fff4df80';for(const p of sources){if(p===anchor)continue;ctx.beginPath();ctx.moveTo(anchor.x*w,anchor.y*h);ctx.lineTo(p.x*w,p.y*h);ctx.stroke()}}
+ for(const p of sources){
+  const x=p.x*w,y=p.y*h,active=playing&&expression.level>.02&&p.id===expression.point.id;
+  ctx.strokeStyle=active?'#ffffff':'#fff0ce';ctx.fillStyle=active?'#fff4df20':'#fff4df0b';
+  if(p.box){const b=p.box,bx=Math.max(0,b.x*w-5),by=Math.max(0,b.y*h-5),bw=Math.min(w-bx,b.w*w+10),bh=Math.min(h-by,b.h*h+10);ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx,by,bw,bh)}
+  ctx.beginPath();ctx.moveTo(x-7,y);ctx.lineTo(x+7,y);ctx.moveTo(x,y-7);ctx.lineTo(x,y+7);ctx.stroke();
+  ctx.strokeRect(x-4,y-4,8,8);
+  const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+  ctx.fillStyle='#fff6e8';ctx.fillText(`${p.name==='object'?'motion':p.name} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,Math.max(8,Math.min(w-100,x+12)),Math.max(14,y-12));
+  if(active){ctx.fillStyle='#fff6e8';ctx.fillRect(x-16,y+13,32*expression.level,2)}
+ }
+ ctx.restore();
 }
