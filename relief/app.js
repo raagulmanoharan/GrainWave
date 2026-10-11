@@ -1,10 +1,10 @@
 import {enhanceFrame} from './postprocess.js';
 import {fuseSources,handRegions,overlapsHand} from './fusion.js';
-import {MotionTracker} from './motion.js?v=deliberate-motion-2';
+import {MotionTracker} from './motion.js?v=pixel-motion-3';
 import {freezeLoop,audibleLoops} from './loops.js';
 import {stepAt} from './music.js';
 import {PointTracker,trackedSequences} from './tracking.js';
-import {MovementGate,SparseNotes} from './movement.js?v=deliberate-motion-2';
+import {MovementGate,SparseNotes} from './movement.js?v=pixel-motion-3';
 const movementGate=new MovementGate(),sparseNotes=new SparseNotes();
 import {sampleDither,fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed'),sample=document.createElement('canvas'),sc=sample.getContext('2d',{willReadFrequently:true});
