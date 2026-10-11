@@ -398,3 +398,5 @@ body[data-settings=true] #open-settings,body[data-settings=true] #live-layer,bod
 body[data-settings=true] .margin-frame{z-index:8;pointer-events:none}
 #settings-panel::before{content:none}
 #settings-panel .settings-grid,#settings-panel .settings-top,#settings-panel .settings-top button,#settings-panel .settings-about p{border:0}
+
+#tour-image{background-image:none}#tour-image img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated}
