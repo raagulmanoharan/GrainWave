@@ -391,3 +391,6 @@ body[data-settings=true] #open-settings,body[data-settings=true] #live-layer,bod
 #settings-panel{background:#080808}
 #settings-panel::before{content:'';position:absolute;top:var(--frame-top);bottom:var(--frame-bottom);left:calc(var(--frame-left) + var(--grid-cell));right:calc(var(--frame-right) + var(--grid-cell));border-left:1px solid #ffffff18;border-right:1px solid #ffffff18;pointer-events:none}
 #settings-panel .settings-top{border-bottom:1px solid #ffffff18}
+
+#settings-panel .settings-top button{border:0;border-left:1px solid #ffffff18;outline:none;box-shadow:none}#settings-panel .settings-top button:focus-visible{outline:1px solid #ffffff50;outline-offset:-8px}
+#settings-panel #settings-flip-camera{appearance:none;width:20px;height:20px;padding:0;margin:0;border:1px solid #ffffff90;border-radius:0;background:none;display:grid;place-items:center}#settings-flip-camera:checked::after{content:"";width:10px;height:10px;background:#fff}
