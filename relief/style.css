@@ -400,3 +400,17 @@ body[data-settings=true] .margin-frame{z-index:8;pointer-events:none}
 #settings-panel .settings-grid,#settings-panel .settings-top,#settings-panel .settings-top button,#settings-panel .settings-about p{border:0}
 
 #tour-image{background-image:none}#tour-image img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:pixelated}
+
+/* The margin grid alone owns cell edges; controls never draw a second frame. */
+.margin-frame,body[data-settings=true] .margin-frame{z-index:9}
+.margin-frame i{display:none!important}
+.margin-frame span,.margin-frame .grid-col-left,.margin-frame .grid-col-right,.margin-frame .grid-row-top,.margin-frame .grid-row-bottom{background:#ffffff18}
+.margin-frame .grid-left,.margin-frame .grid-right,.margin-frame .grid-col-left,.margin-frame .grid-col-right{top:0;bottom:0}
+.margin-frame .grid-top,.margin-frame .grid-bottom,.margin-frame .grid-row-top,.margin-frame .grid-row-bottom{left:0;right:0}
+.margin-frame .grid-right{right:0}.margin-frame .grid-bottom{bottom:0}
+#open-settings,#flip-camera,#tour-close,#tour-back,#tour-next,#settings-panel .settings-top button,.tour-middle{border:0;box-shadow:none}
+#open-settings::before,#flip-camera::before,#capture-loop::before,#play::before{border:0}
+#capture-loop .loop-ring-track{stroke:none}
+#loop-stack .loop-block,#loop-tools button,#loop-tools #play,#live-layer{border:0;border-top:1px solid color-mix(in srgb,var(--loop-color,var(--selected-loop-color,#fff)) 35%,transparent)}
+#live-layer{border-top:0}
+.grid-col-right{right:calc(var(--grid-cell) - 1px)}.grid-row-bottom{bottom:calc(var(--grid-cell) - 1px)}
