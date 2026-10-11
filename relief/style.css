@@ -6,3 +6,5 @@ body[data-mode=playing] .visual-instruction{opacity:0}.threshold-slider{position
 #tracking-state{position:absolute;left:24px;bottom:42px;right:20px;font:10px monospace;color:#f4d6ad;pointer-events:none;margin:0}.visual-instruction{bottom:74px}.flip-camera{bottom:88px}
 
 .gesture-guide{position:absolute;left:24px;top:146px;display:flex;align-items:center;gap:10px;color:#f5dfc8aa;font:9px monospace;pointer-events:none}.gesture-guide #gesture-meter{width:64px;height:3px;background:#fff6e833;overflow:hidden}.gesture-guide i{display:block;height:100%;width:0;background:#f4dbad;transition:width .1s linear}
+
+#depth-cloud{position:absolute;inset:0;pointer-events:none}#cloud{position:relative}#depth-status{position:absolute;left:24px;bottom:94px;font:9px monospace;color:#fff2d999;pointer-events:none}
