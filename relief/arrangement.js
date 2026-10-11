@@ -1,15 +1,35 @@
 export const palette=[57,60,62,64,67,69];
 export function pulsePitch(y){return palette[Math.min(palette.length-1,Math.floor(Math.max(0,Math.min(1,1-y))*palette.length))]}
-// Two bars of syncopation with a fixed, small A-minor pentatonic motif.
-export function arrangementStep(step,{energy=.3}={}){
- const i=step%16,bar=Math.floor(step/16)%2,events=[];
- const hit=(kind,level,freq)=>events.push({type:'percussion',kind,level,freq});
- if([0,6,10].includes(i)||(bar===1&&i===14))hit('kick',.21,55);
- if(i===4||i===12)hit('snare',.16,180);
- if(i%2===0||(energy>.55&&[3,11,15].includes(i)))hit('hat',i%4===2?.055:.035,6000);
- if((bar===0&&i===11)||(bar===1&&i===7))hit('snare',.045,180);
- if(i===0||i===8)events.push({type:'tone',kind:'bass',midi:bar===0?45:40,level:.13,duration:.12});
- const slots=[2,7,10,14],index=slots.indexOf(i),motif=bar===0?[0,2,4,2]:[0,3,2,1];
- if(index>=0)events.push({type:'tone',kind:'pulse',midi:palette[motif[index]],level:.09+energy*.06,duration:.11});
+export function idleTexture(time,lastMotion){return Math.max(0,Math.min(1,(time-lastMotion-2000)/3000))}
+export class MotifSong {
+ constructor(){this.motif=[57,62,64,60];this.pending=[];this.lastSlot=-1;this.seeded=false;this.learned=false;this.lastCommit=-128;this.replace=0;this.stopStep=-1;this.energy=.3}
+ learn(midi,step,slot){
+  if(!palette.includes(midi))return;if(!this.seeded){this.motif=[midi,midi,midi,midi];this.seeded=true}this.stopStep=Math.ceil((step+1)/32)*32;
+  if(slot===this.lastSlot)return;this.lastSlot=slot;
+  if(this.pending.at(-1)!==midi)this.pending.push(midi);if(this.pending.length>4)this.pending.shift();
+ }
+ events(step,energy){
+  if(step%32===0&&this.pending.length===4&&(!this.learned||step-this.lastCommit>=128)){
+   if(!this.learned){this.motif=[...this.pending];this.learned=true}else{this.motif[this.replace%4]=this.pending[this.replace%4];this.replace++}
+   this.lastCommit=step;this.pending=[];
+  }
+  if(this.stopStep<0||step>=this.stopStep)return [];
+  this.energy=Math.max(energy,this.energy*.985);
+  const remaining=this.stopStep-step,gain=energy>.02?1:Math.min(1,remaining/8)*.65;
+  return arrangementStep(step,{energy:this.energy,motif:this.motif}).map(e=>({...e,level:e.level*gain}));
+ }
+}
+export function arrangementStep(step,{energy=.3,motif=[57,62,64,60]}={}){
+ const i=step%16,bar=Math.floor(step/16),events=[],hit=(kind,level,freq)=>events.push({type:'percussion',kind,level,freq});
+ if([0,6,10].includes(i)||(bar%4===3&&i===14))hit('kick',.19,55);
+ if(i===4||i===12)hit('snare',.12,180);
+ if(i%2===0)hit('hat',i%4===2?.04:.025,6000);
+ if(bar%4===3&&i===11&&energy>.4)hit('snare',.035,180);
+ if(i===0||i===8)events.push({type:'tone',kind:'bass',midi:bar%8===7?40:45,level:.11,duration:.15});
+ const slots=[0,4,6,10],index=slots.indexOf(i);
+ if(index>=0)events.push({type:'tone',kind:'bell',midi:motif[index],level:.08,duration:.38,pan:-.25});
+ const shift=2+Math.floor(bar/8)%3,other=slots.indexOf((i-shift+16)%16);
+ if(other>=0&&bar>=2)events.push({type:'tone',kind:'bell',midi:motif[other],level:.04,duration:.32,pan:.3});
+ if(bar%8>=4&&i===14)events.push({type:'tone',kind:'bell',midi:motif[2],level:.025,duration:.3,pan:.1});
  return events;
 }
