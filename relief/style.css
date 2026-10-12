@@ -500,3 +500,9 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 #tour-back,.tour-footer{display:none!important}
 
 #tour-copy{white-space:pre-line;line-height:1.5}
+
+#tour-image{position:relative}
+#tour-image .headphone-art{display:block;width:100%;height:100%;object-fit:cover;image-rendering:auto}
+.headphone-square{position:absolute;width:3px;height:3px;background:var(--square-color);animation:headphone-blip 3s steps(3,end) infinite;animation-play-state:paused;pointer-events:none}
+@keyframes headphone-blip{0%,15%,100%{opacity:0}20%,28%{opacity:1}35%{opacity:.3}40%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.headphone-square{animation:none;opacity:.5}}

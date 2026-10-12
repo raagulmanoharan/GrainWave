@@ -1,28 +1,6 @@
-// Original 334 KB detailed GLB mesh, drawn directly with WebGL and a dither shader.
+// Prebaked app dithering: static editorial artwork, no model or GPU renderer.
 export class Headphones {
- constructor(host){this.host=host;this.canvas=document.createElement('canvas');this.canvas.setAttribute('aria-hidden','true');host.replaceChildren(this.canvas);this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.gl=this.canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'low-power'});this.active=false;
-  if(!this.gl){host.textContent='♫';return}this.load().catch(()=>{host.textContent='Headphones recommended'});
- }
- async load(){const g=this.gl,response=await fetch(new URL('./models/headphones-realistic.glb',import.meta.url));if(!response.ok)throw Error('Headphone model unavailable');const data=await response.arrayBuffer(),view=new DataView(data),jsonLength=view.getUint32(12,true),meta=JSON.parse(new TextDecoder().decode(new Uint8Array(data,20,jsonLength))),base=28+jsonLength;
-  const vertex=`attribute vec3 position;attribute vec3 normal;attribute vec3 color;varying vec3 albedo;uniform float angle;uniform float aspect;varying vec3 n;varying vec3 p;void main(){float c=cos(angle),s=sin(angle);mat3 r=mat3(c,0.,-s,0.,1.,0.,s,0.,c);p=r*position;n=r*normal;albedo=color;float depth=3.5-p.z;gl_Position=vec4(p.x*3.05,(p.y-.26)*3.05*aspect,-p.z*.1,depth);}`;
-  const fragment=`precision mediump float;varying vec3 n;varying vec3 p;varying vec3 albedo;void main(){vec3 normal=normalize(n);vec3 eye=normalize(vec3(0.,.1,3.5)-p);if(dot(normal,eye)<0.)normal=-normal;vec3 lamp=normalize(vec3(-.7,1.1,1.5));float diffuse=max(0.,dot(normal,lamp));float spec=pow(max(0.,dot(normal,normalize(lamp+eye))),40.);float rim=pow(1.-max(0.,dot(normal,eye)),3.);float light=albedo.r*(.24+.9*diffuse)+.32*spec+.16*rim+.035;vec2 q=mod(floor(gl_FragCoord.xy),4.);float d=mod(q.x*2.+q.y*3.,4.)/4.;vec2 cell=floor(gl_FragCoord.xy/2.);float grain=fract(sin(dot(cell,vec2(12.9898,78.233)))*43758.5453);float tone=grain<clamp(light*1.65+.12,0.,.94)? .91:.031;gl_FragColor=vec4(vec3(tone),1.);}`;
-  const shader=(type,src)=>{const s=g.createShader(type);g.shaderSource(s,src);g.compileShader(s);if(!g.getShaderParameter(s,g.COMPILE_STATUS))throw Error(g.getShaderInfoLog(s));return s};this.program=g.createProgram();g.attachShader(this.program,shader(g.VERTEX_SHADER,vertex));g.attachShader(this.program,shader(g.FRAGMENT_SHADER,fragment));g.linkProgram(this.program);g.useProgram(this.program);
-  for(const [name,index] of [['position',0],['normal',1],['color',3]]){const a=meta.accessors[index],b=meta.bufferViews[a.bufferView],buffer=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,buffer);g.bufferData(g.ARRAY_BUFFER,new Float32Array(data,base+b.byteOffset,a.count*3),g.STATIC_DRAW);const loc=g.getAttribLocation(this.program,name);g.enableVertexAttribArray(loc);g.vertexAttribPointer(loc,3,g.FLOAT,false,0,0)}
-  const a=meta.accessors[2],b=meta.bufferViews[a.bufferView];this.count=a.count;g.bindBuffer(g.ELEMENT_ARRAY_BUFFER,g.createBuffer());g.bufferData(g.ELEMENT_ARRAY_BUFFER,new Uint16Array(data,base+b.byteOffset,a.count),g.STATIC_DRAW);g.enable(g.DEPTH_TEST);g.clearColor(8/255,8/255,8/255,1);this.angle=g.getUniformLocation(this.program,'angle');this.aspect=g.getUniformLocation(this.program,'aspect');this.ready=true;if(this.active)this.tick(performance.now());
- }
- start(){this.stop();this.active=true;this.startTime=performance.now();this.last=-Infinity;if(this.ready)this.tick(this.startTime)}
- stop(){this.active=false;cancelAnimationFrame(this.frame);this.frame=null}
- // Tiny coloured pixels blink behind the mesh; no DOM nodes or new buffers.
- drawSquares(g,w,h,time){
-  const palette=[[10/255,132/255,1],[1,214/255,10/255],[48/255,209/255,88/255],[191/255,140/255,1]];
-  const elapsed=this.reduced?900:time-this.startTime;g.enable(g.SCISSOR_TEST);
-  for(let i=0;i<7;i++){
-   const local=elapsed+i*193,period=1400+(i%3)*170,cycle=Math.floor(local/period),phase=(local%period)/period;
-   if(phase>.38)continue;
-   const seed=cycle*97+i*53+17,x=((seed*7919)%997)/997,y=((seed*3571)%991)/991,size=Math.max(2,Math.round((i%3===0?5:2.5)*Math.min(devicePixelRatio,1.5))),opacity=.35+.65*Math.sin(phase/.38*Math.PI),color=palette[(cycle+i)%4];
-   g.scissor(Math.floor(x*(w-size)),Math.floor(y*(h-size)),size,size);g.clearColor(...color.map(c=>8/255+(c-8/255)*opacity),1);g.clear(g.COLOR_BUFFER_BIT);
-  }
-  g.disable(g.SCISSOR_TEST);
- }
- tick=(time)=>{if(!this.active)return;if(time-this.last>=40){this.last=time;const g=this.gl,w=Math.max(1,this.host.clientWidth),h=Math.max(1,this.host.clientHeight),d=Math.min(devicePixelRatio,1.5);const width=Math.round(w*d),height=Math.round(h*d);if(this.canvas.width!==width||this.canvas.height!==height){this.canvas.width=width;this.canvas.height=height}g.viewport(0,0,width,height);g.clearColor(8/255,8/255,8/255,1);g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);this.drawSquares(g,width,height,time);g.uniform1f(this.angle,this.reduced?-.45:(time-this.startTime)*.0004-.45);g.uniform1f(this.aspect,w/h);g.drawElements(g.TRIANGLES,this.count,g.UNSIGNED_SHORT,0)}if(!this.reduced)this.frame=requestAnimationFrame(this.tick)}
+ constructor(host){this.host=host;const image=new Image();image.alt='White EarPods with delicate flowers growing along their stems and cords, in monochrome dither';image.src=new URL('./onboarding/earpods-flowers-dither.png',import.meta.url).href;image.decoding='async';image.className='headphone-art';host.replaceChildren(image);this.squares=[];for(let i=0;i<7;i++){const square=document.createElement('span');square.className='headphone-square';square.style.setProperty('--square-color',['#0a84ff','#ffd60a','#30d158','#bf8cff'][i%4]);square.style.animationDelay=`-${i*.37}s`;square.style.animationDuration=`${2.2+i*.23}s`;host.append(square);this.squares.push(square)}}
+ start(){for(const square of this.squares){square.style.left=`${8+Math.random()*84}%`;square.style.top=`${8+Math.random()*84}%`;square.style.animationPlayState='running'}}
+ stop(){for(const square of this.squares)square.style.animationPlayState='paused'}
 }
