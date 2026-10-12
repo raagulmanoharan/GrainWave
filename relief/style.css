@@ -447,3 +447,12 @@ body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mod
 #loop-tools button,#loop-tools #play{background:#080808;color:var(--selected-loop-color);mix-blend-mode:normal;border-top:1px solid #ffffff18}
 
 #loop-stack .loop-block .loop-swatch{display:block;width:10px;height:10px;background:var(--loop-color);text-decoration:none}#loop-stack .loop-block.selected .loop-swatch{outline:1px solid var(--loop-color);outline-offset:3px}
+/* Invert only the neutral backing; preserve loop identity above it. */
+#loop-stack .loop-block,#loop-stack .loop-block.selected,#loop-stack .loop-block.paused,#loop-tools button,#loop-tools #play{background:transparent;mix-blend-mode:normal;isolation:auto;border:0;position:relative}
+#loop-stack .loop-block::before,#loop-tools button::before,#loop-tools #play::before{content:'';position:absolute;inset:0;background:#fff;mix-blend-mode:difference;pointer-events:none;border:0;z-index:-1}
+#loop-stack .loop-block,#loop-tools button,#loop-tools #play{z-index:0}
+#loop-stack .loop-block::after,#loop-tools button::after,#loop-tools #play::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:#ffffff50;mix-blend-mode:difference;pointer-events:none}
+#loop-stack .loop-block .loop-swatch,#loop-stack .loop-block i{position:relative;z-index:1}
+#loop-stack .loop-block i{position:absolute}
+#loop-stack .loop-block::before,#loop-tools button::before,#loop-tools #play::before,#loop-stack .loop-block::after,#loop-tools button::after,#loop-tools #play::after{content:none}
+#loop-stack .loop-block,#loop-stack .loop-block.selected,#loop-stack .loop-block.paused,#loop-tools button,#loop-tools #play{background:var(--cell-fill,#f4f4ef);border-top:1px solid var(--cell-edge,#00000030)}
