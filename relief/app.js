@@ -19,7 +19,7 @@ import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
 import {complementaryPitch} from './layer-harmony.js?v=natural-1';
 import {loopStatus} from './loop-status.js?v=voice-2';
-const loopColors=['#ff453a','#ffd60a','#0a84ff','#30d158'];
+const loopColors=['#0a84ff','#ffd60a','#30d158','#bf8cff'];
 let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
 import {LoopRack} from './note-buffer.js?v=rack-1';
 const noteBuffer=new LoopRack();

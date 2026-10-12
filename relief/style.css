@@ -433,3 +433,10 @@ body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mod
 #loop-tools:not([hidden]) button:nth-child(5){animation-delay:180ms}
 @keyframes loop-control-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#loop-tools:not([hidden]) button{animation:none}}
+
+/* Solid loop identities stay readable over every camera background. */
+#loop-stack .loop-block,#loop-stack .loop-block.selected{background:var(--loop-color);color:#080808;opacity:1;mix-blend-mode:normal;border:0}
+#loop-stack .loop-block.paused{background:color-mix(in srgb,var(--loop-color) 65%,#080808);color:#080808;opacity:1}
+#loop-stack .loop-block.selected span{text-decoration:underline;text-underline-offset:5px}
+#loop-stack .loop-block i{background:#080808;height:2px}
+#loop-tools button,#loop-tools #play{background:var(--selected-loop-color);color:#080808;mix-blend-mode:normal;border:0;border-top:1px solid #00000018}
