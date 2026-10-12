@@ -424,3 +424,12 @@ body:not([data-settings=true]):not([data-onboarding=true]) #flip-camera::before{
 body:not([data-settings=true]):not([data-onboarding=true]) #live-layer{mix-blend-mode:difference;background:#fff;color:#000}
 body:not([data-settings=true]):not([data-onboarding=true]) #loop-flow,
 body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mode:difference;color:#fff}
+/* Staggered reveal follows the selected loop, without delaying interaction. */
+#loop-tools:not([hidden]) button{animation:loop-control-reveal .26s cubic-bezier(.2,.7,.2,1) both}
+#loop-tools:not([hidden]) button:nth-child(1){animation-delay:0ms}
+#loop-tools:not([hidden]) button:nth-child(2){animation-delay:45ms}
+#loop-tools:not([hidden]) button:nth-child(3){animation-delay:90ms}
+#loop-tools:not([hidden]) button:nth-child(4){animation-delay:135ms}
+#loop-tools:not([hidden]) button:nth-child(5){animation-delay:180ms}
+@keyframes loop-control-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#loop-tools:not([hidden]) button{animation:none}}
