@@ -1,6 +1,6 @@
 const slides=[
  {title:'The world has\na soundtrack.',body:'Most days, we look past it. Relief turns everyday movement into music. A small invitation to slow down, look closer, and hear your surroundings differently.',alt:'Dithered rooftops and a windblown branch seen through a window'},
- {title:'Nothing to play?\nLook around.',body:'A bird. A passing car. Your own hand. Point your camera at something moving and hear what happens. No musical bones required.',alt:'Dithered birds crossing a dark sky'},
+ {title:'Move a little.\nHear a little.',body:'Hold the camera steady and wave a hand in view. Movement plays notes; stillness lets the chords linger. Move higher for higher notes, lower for lower ones. Faster movement makes little runs.',alt:'Dithered birds crossing a dark sky'},
  {title:'That was nice.\nKeep it.',body:'Found a little tune in the traffic? Tap KEEP. That moment goes round while you look for the next. Rush hour, considerably improved.',alt:'Dithered overhead traffic with long light trails'},
  {title:'One more thing.\nThen another.',body:'Tap + to make new notes over your first loop. KEEP the ones you like. Up to four little worlds, turning together. No lessons. Just looking.',alt:'A dithered hand leaving overlapping ghost trails'}
 ];
