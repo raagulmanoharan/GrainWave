@@ -414,3 +414,13 @@ body[data-settings=true] .margin-frame{z-index:8;pointer-events:none}
 #loop-stack .loop-block,#loop-tools button,#loop-tools #play,#live-layer{border:0;border-top:1px solid color-mix(in srgb,var(--loop-color,var(--selected-loop-color,#fff)) 35%,transparent)}
 #live-layer{border-top:0}
 .grid-col-right{right:calc(var(--grid-cell) - 1px)}.grid-row-bottom{bottom:calc(var(--grid-cell) - 1px)}
+/* Local contrast inversion, with no frame sampling or camera readbacks. */
+body:not([data-settings=true]):not([data-onboarding=true]) .margin-frame{mix-blend-mode:difference}
+body:not([data-settings=true]):not([data-onboarding=true]) .margin-frame span{background:#ffffff50}
+body:not([data-settings=true]):not([data-onboarding=true]) #open-settings,
+body:not([data-settings=true]):not([data-onboarding=true]) #flip-camera{mix-blend-mode:difference;background:transparent;color:#fff;backdrop-filter:none}
+body:not([data-settings=true]):not([data-onboarding=true]) #open-settings::before,
+body:not([data-settings=true]):not([data-onboarding=true]) #flip-camera::before{background:transparent}
+body:not([data-settings=true]):not([data-onboarding=true]) #live-layer{mix-blend-mode:difference;background:#fff;color:#000}
+body:not([data-settings=true]):not([data-onboarding=true]) #loop-flow,
+body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mode:difference;color:#fff}
