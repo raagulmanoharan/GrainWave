@@ -6,7 +6,7 @@ const grainCrossfade=new GrainCrossfade();
 import {MotionArpeggio} from './motion-arpeggio.js';
 const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
-import {Onboarding} from './onboarding.js?v=full-flowers-1';
+import {Onboarding} from './onboarding.js?v=quiet-art-1';
 import {GrainProcessor} from './grain-process.js?v=fresh-1';
 import {AmbientBed} from './ambient.js?v=lofi-budget-1';
 let ambientBed=null;
