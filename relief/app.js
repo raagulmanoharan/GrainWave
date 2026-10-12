@@ -202,12 +202,6 @@ $('flip-camera').onclick=()=>onboarding.open();
 canvas.addEventListener('click',async()=>{if(playing||audioStarting||onboarding.active)return;if(!onboarding.seen){onboarding.open();return}if(!stream)await startCamera();if(stream)$('play').click()});
 canvas.addEventListener('keydown',e=>{if(!playing&&(e.key==='Enter'||e.key===' ')){e.preventDefault();canvas.click()}});
 
-// Use the same threshold grain treatment as the guide artwork.
-const aboutPhoto=document.querySelector('.settings-about img');
-function ditherAboutPhoto(){if(!aboutPhoto.naturalWidth)return;const c=document.createElement('canvas');c.width=1280;c.height=960;const x=c.getContext('2d');x.drawImage(aboutPhoto,0,0,1280,960);const frame=x.getImageData(0,0,1280,960);const tones=[12,54,108,174,228];for(let i=0;i<frame.data.length;i+=4){const lum=(frame.data[i]*.2126+frame.data[i+1]*.7152+frame.data[i+2]*.0722)/255;let h=Math.imul((i/4+1)^0x9e3779b9,0x45d9f3b);h=Math.imul(h^(h>>>16),0x45d9f3b);const noise=((h^(h>>>16))>>>0)/4294967296-.5;const signal=Math.max(0,Math.min(1,(lum-.48)*1.08+.5+noise*.17));const level=tones[Math.min(4,Math.floor(signal*5))];frame.data[i]=frame.data[i+1]=frame.data[i+2]=level}x.putImageData(frame,0,0);c.setAttribute('role','img');c.setAttribute('aria-label',aboutPhoto.alt);aboutPhoto.hidden=true;aboutPhoto.after(c)}
-if(aboutPhoto.complete)ditherAboutPhoto();else aboutPhoto.addEventListener('load',ditherAboutPhoto,{once:true});
-
-
 let theme='dark';try{theme=localStorage.getItem('relief-theme')==='light'?'light':'dark'}catch{}
 function applyTheme(value){document.body.dataset.theme=value;$('light-mode').checked=value==='light';document.querySelector('meta[name="theme-color"]').content=value==='light'?'#ffffff':'#080808';try{localStorage.setItem('relief-theme',value)}catch{}}
 applyTheme(theme);$('light-mode').onchange=()=>applyTheme($('light-mode').checked?'light':'dark');
