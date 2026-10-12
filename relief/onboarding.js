@@ -1,12 +1,12 @@
 const slides=[
- {title:'The world has\na soundtrack.',body:'Most days, we look past it. Relief turns everyday movement into music. A small invitation to slow down, look closer, and hear your surroundings differently.',alt:'Dithered birds crossing a dark sky'},
+ {title:'The world has\na soundtrack.',body:'Most days, we look past it. Relief turns everyday movement into music. A small invitation to slow down, look closer, and hear your surroundings differently.',alt:'Dithered rooftops and a windblown branch seen through a window'},
  {title:'Nothing to play?\nLook around.',body:'A bird. A passing car. Your own hand. Point your camera at something moving and hear what happens. No musical bones required.',alt:'Dithered birds crossing a dark sky'},
  {title:'That was nice.\nKeep it.',body:'Found a little tune in the traffic? Tap KEEP. That moment goes round while you look for the next. Rush hour, considerably improved.',alt:'Dithered overhead traffic with long light trails'},
  {title:'One more thing.\nThen another.',body:'Tap + to make new notes over your first loop. KEEP the ones you like. Up to four little worlds, turning together. No lessons. Just looking.',alt:'A dithered hand leaving overlapping ghost trails'}
 ];
 const key='relief-tour-v1';
 export class Onboarding{
- constructor({onOpen,onFinish}){this.onOpen=onOpen;this.onFinish=onFinish;this.panel=document.getElementById('onboarding');this.index=0;this.active=false;this.images=[1,1,2,3].map((n,index)=>{const image=new Image();image.alt='';image.decoding='async';image.onload=()=>{if(this.index===index)this.drawImage()};image.src=`onboarding/slide-${n}.png`;return image});this.seen=false;try{this.seen=localStorage.getItem(key)==='done'}catch{}
+ constructor({onOpen,onFinish}){this.onOpen=onOpen;this.onFinish=onFinish;this.panel=document.getElementById('onboarding');this.index=0;this.active=false;this.images=[0,1,2,3].map((n,index)=>{const image=new Image();image.alt='';image.decoding='async';image.onload=()=>{if(this.index===index)this.drawImage()};image.src=`onboarding/slide-${n}.png`;return image});this.seen=false;try{this.seen=localStorage.getItem(key)==='done'}catch{}
  document.getElementById('tour-next').onclick=()=>this.index===slides.length-1?this.finish():this.show(this.index+1);
  document.getElementById('tour-back').onclick=()=>this.show(this.index-1);
  document.getElementById('tour-close').onclick=()=>this.finish();

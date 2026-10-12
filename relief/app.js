@@ -1,4 +1,5 @@
-import {Onboarding} from './onboarding.js?v=copy-plain-1';
+import {leadModulation} from './lead-modulation.js';
+import {Onboarding} from './onboarding.js?v=intro-drift-1';
 import {GrainProcessor} from './grain-process.js?v=fine-1';
 import {AmbientBed} from './ambient.js?v=arrival-1';
 let ambientBed=null;
@@ -103,7 +104,7 @@ function perform(time){
   loopHighlights.push({point:event.point,loopId:event.loopId,start:event.at,end:event.at+180});
  }
 
- if(trigger){lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.16+state.level*.1+song.build*.045,duration:1.2+Math.random()*1.6,noise:.12+ +$('breath').value/600,pan:(state.point.x-.5)*1.2});
+ if(trigger){const drift=leadModulation(audio.currentTime);lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.16+state.level*.1+song.build*.045,duration:(1.2+Math.random()*1.6)*drift.release,noise:.12+ +$('breath').value/600+drift.noise,pan:(state.point.x-.5)*1.2});
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
