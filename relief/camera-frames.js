@@ -1,11 +1,16 @@
-// Each consumer analyses a decoded camera frame at most once. Audio and drawing
-// remain free to run between frames, including on low-frame-rate cameras.
+// Prefer presented video frames over playback counters, which can stall on
+// mobile live streams. Each processing path consumes frames independently.
 export class CameraFrames {
- constructor(video){this.video=video;this.consumed=new Map()}
+ constructor(video){
+  this.video=video;this.consumed=new Map();this.presented=0;
+  if(video.requestVideoFrameCallback){
+   const next=()=>{this.presented++;this.callback=video.requestVideoFrameCallback(next)};
+   this.callback=video.requestVideoFrameCallback(next);
+  }
+ }
  take(consumer,generation){
   const video=this.video;if(video.readyState<2)return false;
-  const decoded=video.getVideoPlaybackQuality?.().totalVideoFrames;
-  const key=`${generation}:${decoded>0?decoded:video.currentTime}`;
+  const key=`${generation}:${this.presented||video.currentTime}`;
   if(this.consumed.get(consumer)===key)return false;
   this.consumed.set(consumer,key);return true;
  }

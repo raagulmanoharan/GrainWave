@@ -1,4 +1,4 @@
-import {CameraFrames} from './camera-frames.js?v=fresh-1';
+import {CameraFrames} from './camera-frames.js?v=presented-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
 import {GrainCrossfade} from './grain-crossfade.js';
@@ -19,7 +19,7 @@ import {VisualLoop} from './visual-loop.js?v=still-2';
 const visualLoop=new VisualLoop();let loopHighlights=[];
 import {SceneMemory} from './scene-memory.js?v=splice-1';
 const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
-import {MotionEcho} from './motion-echo.js?v=drive-1';
+import {MotionEcho} from './motion-echo.js?v=presented-1';
 import {pulsePitch} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
 import {complementaryPitch} from './layer-harmony.js?v=natural-1';
@@ -109,7 +109,7 @@ function perform(time){
   loopHighlights.push({point:event.point,loopId:event.loopId,start:event.at,end:event.at+180});
  }
 
- if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);lastPercussion=time;motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
+ if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);lastPercussion=time;if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
