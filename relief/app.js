@@ -17,7 +17,7 @@ const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
 import {MotionEcho} from './motion-echo.js?v=drive-1';
 import {pulsePitch,idleTexture} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
-import {complementaryPitch} from './layer-harmony.js?v=rack-1';
+import {complementaryPitch} from './layer-harmony.js?v=natural-1';
 import {loopStatus} from './loop-status.js?v=voice-2';
 const loopColors=['#ff453a','#ffd60a','#0a84ff','#30d158'];
 let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
@@ -110,7 +110,7 @@ function perform(time){
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
- while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;const drift=leadModulation(audio.currentTime);currentPitch=event.midi;noteBuffer.record({...event,time:event.at});instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.16+event.velocity*.08)*.85,duration:1.4*drift.release,noise:.12+ +$('breath').value/600+drift.noise,pan:(event.point.x-.5)*1.2});visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});visibleNotes=[event,null,null];syncLoopButton()}
+ while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.16+event.velocity*.08)*.85,duration:1.4*drift.release,noise:.12+ +$('breath').value/600+drift.noise,pan:(event.point.x-.5)*1.2});visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});visibleNotes=[event,null,null];syncLoopButton()}
  if(currentPitch!==null)instrument(master).port.postMessage({type:'expression',freq:440*2**((currentPitch-69)/12),level:state.level*.8,params:{}});
 }
 function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',noteBuffer.selection?!noteBuffer.selection.paused:liveRunning);$('play').classList.toggle('layer-ready',!noteBuffer.selection&&Boolean(noteBuffer.locked)&&!liveRunning);$('play').setAttribute('aria-label',noteBuffer.selection?(noteBuffer.selection.paused?'Play selected loop':'Pause selected loop'):liveRunning?'Pause live generation':noteBuffer.locked?'Layer live generation over loop':'Start the live instrument');$('play-label').textContent=noteBuffer.selection?(noteBuffer.selection.paused?'PLAY':'PAUSE'):liveRunning?'HOLD':'+ LIVE';$('live-state').textContent=playing?'PLAYING':'LIVE';$('live-layer').hidden=!playing;$('live-layer').textContent='+';$('live-layer').setAttribute('aria-pressed',String(liveRunning));$('live-layer').setAttribute('aria-label','Play new notes alongside your loops');updateLoopStatus()}
