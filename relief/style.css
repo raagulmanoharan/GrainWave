@@ -445,3 +445,5 @@ body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mod
 #loop-stack .loop-block.paused span{opacity:.6}
 #loop-stack .loop-block i{background:var(--loop-color)}
 #loop-tools button,#loop-tools #play{background:#080808;color:var(--selected-loop-color);mix-blend-mode:normal;border-top:1px solid #ffffff18}
+
+#loop-stack .loop-block .loop-swatch{display:block;width:10px;height:10px;background:var(--loop-color);text-decoration:none}#loop-stack .loop-block.selected .loop-swatch{outline:1px solid var(--loop-color);outline-offset:3px}
