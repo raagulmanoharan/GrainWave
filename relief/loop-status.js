@@ -20,10 +20,10 @@ const layering=['Tap KEEP to save another','Tap KEEP. Collect the chaos.','Tap K
 const capacity=['Tap a loop to edit it','No room. Plenty of music.','Four little worlds. Yours.','Tap a loop. Give it a new twist.','A full house of happy accidents.','Tap a loop to change its pace'];
 const choose=(lines,beat)=>lines[((beat%lines.length)+lines.length)%lines.length];
 export function loopStatus({loops=[],selection=null,live=false,noteCount=0,saved=false,beat=0}){
- if(saved)return `Loop ${loops.length} saved. ${choose(catches,beat)}\nTap + to add more notes`;
+ if(saved)return loops.length>=4?`Four loops kept.\nLive notes keep playing.`:`Kept. Make another.\n${loops.length} loop${loops.length===1?'':'s'} underneath your new notes`;
  if(selection){const octave=selection.octave/12,pitch=octave===0?'original pitch':`${octave>0?'+':''}${octave} octave${Math.abs(octave)>1?'s':''}`;return `Loop ${selection.id} · ${selection.paused?'paused':'playing'}\n${selection.paused?"Tap PLAY. Break's over.":beat%2?choose(comforts,Math.floor(beat/2)):`${selection.speed}× speed · ${pitch}`}`}
  const running=loops.filter(l=>!l.paused).length;
  if(loops.length>=4)return `4 loops saved · ${running} playing\n${choose(capacity,beat)}`;
  if(live){if(!loops.length)return noteCount?`${noteCount} notes. ${choose(noteReactions,beat)}\nTap KEEP to save a loop`:`${choose(prompts,beat)}\nMove to play. KEEP saves it.`;return `${running} loop${running===1?'':'s'} + new notes\n${choose(layering,beat)}`}
- return running?`${running} loop${running===1?'':'s'} playing\n${beat%2?choose(comforts,Math.floor(beat/2)):'Tap + to add more notes'}`:"Loops paused. Tiny breather.\nTap + to play new notes";
+ return running?`${running} loop${running===1?'':'s'} playing\n${beat%2?choose(comforts,Math.floor(beat/2)):'Move to play alongside your loops'}`:"Loops paused. Tiny breather.\nMove to play new notes";
 }
