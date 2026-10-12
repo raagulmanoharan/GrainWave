@@ -1,3 +1,5 @@
+import {GrainCrossfade} from './grain-crossfade.js';
+const grainCrossfade=new GrainCrossfade();
 import {MotionArpeggio} from './motion-arpeggio.js';
 const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
@@ -44,7 +46,7 @@ let visibleNotes=[];const scheduled=[],reduced=matchMedia('(prefers-reduced-moti
 function status(text){$('status').textContent=text}
 function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);rebuildNotes()}
 function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
-function releaseCamera(){clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:"reset"});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});lastHandResult=0;lastHandRequest=0;handResult={landmarks:[]};motionSources=[];recentRegions=[];lastHandPresence=0;cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
+function releaseCamera(){grainCrossfade.reset();clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:"reset"});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});lastHandResult=0;lastHandRequest=0;handResult={landmarks:[]};motionSources=[];recentRegions=[];lastHandPresence=0;cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 async function startCamera(){if(cameraBusy||stream)return;cameraBusy=true;const generation=++cameraGeneration;$('camera').disabled=true;status('Opening your camera…');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS and a supported browser');const incoming=await navigator.mediaDevices.getUserMedia({audio:false,video:{frameRate:{ideal:30,max:30},facingMode:{ideal:facing},width:{ideal:640},height:{ideal:840}}});if(generation!==cameraGeneration){incoming.getTracks().forEach(t=>t.stop());return}stream=incoming;video.srcObject=stream;await video.play();if(generation!==cameraGeneration)return;rebuildNotes();$('camera').hidden=true;status('')}catch(error){$('camera').hidden=false;status(error.name==='NotAllowedError'?'Enable camera access in your browser to play.':`Camera unavailable. ${error.message}.`)}finally{cameraBusy=false;$('camera').disabled=false}}
 function resize(){const cell=Math.round(Math.max(56,Math.min(80,innerWidth*.16)));canvas.parentElement.style.setProperty('--grid-cell',`${cell}px`);$('settings-panel').style.setProperty('--grid-cell',`${cell}px`);const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio,2);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d)}new ResizeObserver(resize).observe(canvas);resize();
 function trackingStatus(text){if($('tracking-state').textContent!==text)$('tracking-state').textContent=text}
@@ -72,7 +74,7 @@ function sampleVideo(){if(video.readyState<2)return;
 
 $('camera').onclick=startCamera;
 $('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';points=[];await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
-$('mirror-toggle').onchange=()=>{clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:'reset'});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
+$('mirror-toggle').onchange=()=>{grainCrossfade.reset();clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:'reset'});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});handResult={landmarks:[]};recentRegions=[];lastHandPresence=0;motionSources=[];tracked=[];lastHandResult=0;rebuildNotes();sampleVideo()};
 
 function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if(playing&&stream&&time-lastSample>33){sampleVideo();lastSample=time}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h);drawLoopProgress(w,h,time)}if(playing)rebuildNotes();frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
@@ -171,7 +173,7 @@ function drawTracked(w,h){
 }
 
 const grainInput=document.createElement('canvas'),grainInputContext=grainInput.getContext('2d',{willReadFrequently:true}),grainFallback=new GrainProcessor();let grainWorker=null,grainBusy=false;
-function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
+function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainData&&grainCanvas.width===frame.width&&grainCanvas.height===frame.height){grainCrossfade.capture(grainCanvas,performance.now(),frame.generation)}else{grainCrossfade.reset();grainCrossfade.generation=frame.generation}if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
 try{grainWorker=new Worker('grain-worker.js?v=fine-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
 function drawGrain(w,h,time){
  if(!grainBusy&&(time-lastGrain>=33||!grainData)){
@@ -181,7 +183,7 @@ function drawGrain(w,h,time){
   const frame={data,width,height,drive:+$('distortion').value/100,settled:playing?idleTexture(time,expression.lastMotion):0,threshold,playing,boxes:motionSources.map(p=>p.box).filter(Boolean),generation:cameraGeneration};
   lastGrain=time;if(grainWorker){grainBusy=true;grainWorker.postMessage(frame,[data.buffer])}else receiveGrain({...frame,data:grainFallback.process(frame)});
  }
- if(grainData){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(grainCanvas,0,0,w,h);ctx.restore()}
+ if(grainData)grainCrossfade.draw(ctx,grainCanvas,w,h,time)
 }
 
 function drawLoopProgress(){}
