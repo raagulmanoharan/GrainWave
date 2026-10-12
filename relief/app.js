@@ -96,7 +96,6 @@ function instrument(output){if(!output.instrument){output.instrument=new AudioWo
 function perform(time){
  const copyBeat=Math.floor(time/10000);if(copyBeat!==lastCopyBeat){lastCopyBeat=copyBeat;updateLoopStatus()}
  if(capturedNoticeUntil&&time>=capturedNoticeUntil){capturedNoticeUntil=0;syncPreview()}
- $('loop-progress').style.strokeDashoffset=100*(1-noteBuffer.progress(time));
  for(const l of noteBuffer.loops){const b=document.querySelector(`[data-loop-id="${l.id}"]`);if(b){b.style.setProperty('--phase',`${(l.paused?l.phase:l.clock.progress(time))*100}%`);b.classList.toggle('paused',l.paused)}}
  const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
@@ -136,7 +135,6 @@ function syncLoopRack(){
  $('loop-stack').replaceChildren(...noteBuffer.loops.map(l=>{const b=document.createElement('button');b.dataset.loopId=l.id;b.className='loop-block';b.style.setProperty('--loop-color',loopColors[(l.id-1)%4]);b.classList.toggle('selected',l.id===noteBuffer.selected);b.classList.toggle('paused',l.paused);b.setAttribute('aria-pressed',String(l.id===noteBuffer.selected));b.setAttribute('aria-label',`Select loop ${l.id}, ${l.speed} times speed, ${l.octave/12} octaves`);b.innerHTML=`<span class="loop-swatch" aria-hidden="true"></span><i></i>`;b.onclick=()=>{noteBuffer.selected=noteBuffer.selected===l.id?null:l.id;syncLoopRack();syncPreview()};return b}));
  }
  $('loop-tools').hidden=!noteBuffer.selection;
- $('capture-loop').style.setProperty('--progress-loop-color',noteBuffer.loops.length<4?loopColors[(noteBuffer.nextId-1)%4]:'var(--ink)');
  if(noteBuffer.selection){canvas.parentElement.style.setProperty('--selected-loop-color',loopColors[(noteBuffer.selected-1)%4])}
  updateLoopStatus();
 }

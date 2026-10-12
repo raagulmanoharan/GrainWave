@@ -176,10 +176,6 @@ body[data-mode=camera] #capture-loop{display:none}
 #play .icon-plus{display:none}
 #play.layer-ready .icon-play{display:none}
 #play.layer-ready .icon-plus{display:block}
-#capture-loop .loop-ring{position:absolute;inset:-1px;width:64px;height:64px;fill:none;stroke:none;transform:rotate(-90deg);pointer-events:none;display:none}
-#capture-loop[aria-pressed=true] .loop-ring{display:block}
-.loop-ring .loop-ring-track{stroke:#ff792c30;stroke-width:2}
-#loop-progress{stroke:#ff792c;stroke-width:2;stroke-linecap:butt;fill:none}
 
 /* A single hairline margin system; the corner marks are the controls. */
 .stage{--frame-left:max(24px,env(safe-area-inset-left,0px));--frame-right:max(24px,env(safe-area-inset-right,0px));--frame-top:max(24px,env(safe-area-inset-top,0px));--frame-bottom:max(24px,env(safe-area-inset-bottom,0px))}
@@ -198,9 +194,6 @@ body[data-mode=playing] .margin-frame i{display:none}
 #play::before{background:#fff}
 #capture-loop[aria-pressed=true]{background:transparent;border:0;color:#ec3028}
 #open-settings .pixel-icon,#flip-camera .pixel-icon,#capture-loop .pixel-icon,#play .pixel-icon{display:none!important}
-#capture-loop .loop-ring{inset:17px;width:10px;height:10px;transform:none}
-.loop-ring .loop-ring-track{stroke:#ff792c40;stroke-width:1}
-#loop-progress{stroke-width:1}
 #play.layer-ready::before{background:#fff}
 #capture-loop:disabled{opacity:.5}
 
@@ -232,7 +225,6 @@ body[data-mode=playing] .margin-frame i{display:none}
 #play.playing .icon-play,#play.layer-ready .icon-play,#capture-loop[aria-pressed=true] .icon-magic{display:none!important}
 #play.playing .icon-pause,#play.layer-ready .icon-plus,#capture-loop[aria-pressed=true] .icon-loop{display:block!important}
 #capture-loop[aria-pressed=true]{color:#fff}
-#capture-loop .loop-ring{inset:0;width:100%;height:100%;z-index:2}
 
 /* Quiet drafting guides; controls appear only inside the instrument. */
 .margin-frame span{background:#ffffff24}
@@ -298,7 +290,6 @@ body[data-mode=camera] #loop-link{display:none}
 #loop-flow{font-size:12px;line-height:1.45;white-space:pre-line;color:#ffffffd9}
 #status{font-size:12px;line-height:1.45;color:#ffffffd9}
 
-#loop-progress{stroke:var(--selected-loop-color,#ff453a)}
 
 .gesture-guide{display:none}
 
@@ -328,7 +319,6 @@ body[data-onboarding=true] #open-settings,body[data-onboarding=true] #flip-camer
 
 .tour-text{padding:clamp(12px,3vw,24px);gap:12px}#tour-title{font-size:clamp(25px,7vw,44px)}#tour-copy{font-size:clamp(12px,3.3vw,16px);line-height:1.4}@media(max-height:650px){.tour-text{padding:10px;gap:8px}#tour-title{font-size:22px}#tour-copy{font-size:11px;line-height:1.3}}
 
-#loop-progress{stroke:var(--progress-loop-color,#ff453a)}#capture-loop .loop-ring-track{stroke:color-mix(in srgb,var(--progress-loop-color,#ff453a) 20%,transparent)}
 #loop-tools button,#loop-tools #play{border-color:var(--selected-loop-color);border-width:1px;border-bottom-width:0}
 
 .help-label{position:relative;z-index:1;font:400 24px/1 ReliefPixel,monospace}#settings-flip-camera{border:1px solid #ffffff30;padding:14px 16px;color:#fff;background:transparent;font:400 14px/1 ReliefPixel,monospace;margin:8px 0 20px}
@@ -410,7 +400,6 @@ body[data-settings=true] .margin-frame{z-index:8;pointer-events:none}
 .margin-frame .grid-right{right:0}.margin-frame .grid-bottom{bottom:0}
 #open-settings,#flip-camera,#tour-close,#tour-back,#tour-next,#settings-panel .settings-top button,.tour-middle{border:0;box-shadow:none}
 #open-settings::before,#flip-camera::before,#capture-loop::before,#play::before{border:0}
-#capture-loop .loop-ring-track{stroke:none}
 #loop-stack .loop-block,#loop-tools button,#loop-tools #play,#live-layer{border:0;border-top:1px solid color-mix(in srgb,var(--loop-color,var(--selected-loop-color,#fff)) 35%,transparent)}
 #live-layer{border-top:0}
 .grid-col-right{right:calc(var(--grid-cell) - 1px)}.grid-row-bottom{bottom:calc(var(--grid-cell) - 1px)}
@@ -477,7 +466,6 @@ body,.stage{background:var(--chrome);color:var(--ink)}.stage::after{display:none
 #tour-close,#tour-back,#tour-next{background:var(--chrome);color:var(--ink)}.tour-footer{color:var(--muted)}
 body[data-theme=light] .tour-text{background:#fff;color:#111}
 
-#loop-progress{stroke-width:1px;vector-effect:non-scaling-stroke;stroke-linecap:butt}
 
 /* Unfold the guide from its center seam; retain the fixed grid. */
 body[data-onboarding=true] #landing-type{visibility:visible}
@@ -511,3 +499,14 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 #tour-title{font-size:clamp(22px,min(9.8cqw,10cqh),32px);line-height:.98;letter-spacing:-.6px}
 #tour-copy{font-size:clamp(11px,min(4.8cqw,3.7cqh),14px);line-height:1.42;max-width:none}
 @media(max-height:650px){.tour-middle{grid-template-rows:minmax(0,.35fr) minmax(0,.65fr)}.tour-text{padding:10px;gap:8px}#tour-title{font-size:20px}#tour-copy{font-size:10px;line-height:1.35}}
+
+/* Approved plain-language pixel controls and solid accent KEEP. */
+#loop-tools button:not(#play){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0}
+.loop-control-icon{width:21px;height:21px;fill:currentColor;stroke:none}
+.loop-control-word{font:400 12px/1 ReliefPixel,monospace;letter-spacing:.2px}
+#loop-tools #play #play-label{display:none}
+#loop-tools #play svg{display:none!important;stroke:none;stroke-width:0;width:24px;height:24px}
+#loop-tools #play.playing .icon-pause{display:block!important}
+#loop-tools #play:not(.playing) .icon-play{display:block!important}
+.stage #capture-loop{background:#ff453a;color:#fff;mix-blend-mode:normal;border:0}
+.stage #capture-loop::before{background:transparent}
