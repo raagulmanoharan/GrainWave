@@ -9,12 +9,12 @@ export class MotionExpression {
    const x=p.x-cameraOffset.x,y=p.y-cameraOffset.y,old=this.history.get(p.id)||(p.name==='object'&&Number.isFinite(p.dx)&&Number.isFinite(p.dy)?{x:x-p.dx,y:y-p.dy,time:time-(p.interval||60)}:null);if(old&&time<=old.time)continue;this.history.set(p.id,{x,y,time});
    if(!old||time-old.time>400)continue;
    const measured=p.name==='object'&&Number.isFinite(p.dx)&&Number.isFinite(p.dy);const dx=measured?p.dx:x-old.x,dy=measured?p.dy:y-old.y,travel=Math.hypot(dx,dy),dt=Math.max(.03,(time-old.time)/1000),floor=p.name==='object'?.0007:.003;
-   if(travel<floor)continue;
-   const energy=Math.min(1,Math.max(0,travel/dt-(p.name==='object'?.008:.02))*(5+sensitivity*9));
-   if(energy>.02)this.active.set(p.id,now+180);
+   if(p.confirmed?travel<=0:travel<floor)continue;
+   const energy=Math.min(1,Math.max(0,travel/dt-(p.confirmed?0:p.name==='object'?.008:.02))*(5+sensitivity*9));
+   if(p.confirmed||energy>.02)this.active.set(p.id,now+180);
    if(energy>strongest){strongest=energy;this.point={...p};this.direction=dy;}
   }
-  if(strongest>.02){this.energy=strongest;this.lastMotion=now;this.revision++}
+  if(strongest>0){this.energy=strongest;this.lastMotion=now;this.revision++}
   for(const [id,p] of this.history)if(now-p.time>500)this.history.delete(id);
  }
  advance(now,{release=.56}={}){
