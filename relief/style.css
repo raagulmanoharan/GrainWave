@@ -498,3 +498,5 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 #tour-image{background:#080808;background-image:none;overflow:hidden}
 #tour-image canvas{display:block;width:100%;height:100%}
 #tour-back,.tour-footer{display:none!important}
+
+#tour-copy{white-space:pre-line;line-height:1.5}
