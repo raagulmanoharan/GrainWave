@@ -493,3 +493,8 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 @keyframes guide-copy-settle{from{transform:translateY(-14px)}to{transform:translateY(0)}}
 @keyframes guide-controls{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){#onboarding:not([hidden]) .tour-middle,#onboarding:not([hidden]) #tour-image,#onboarding:not([hidden]) .tour-text,#onboarding:not([hidden]) #tour-close,#onboarding:not([hidden]) #tour-back,#onboarding:not([hidden]) #tour-next,#onboarding:not([hidden]) .tour-footer{animation:none}}
+
+/* One-screen headphone introduction, inside the shared margin grid. */
+#tour-image{background:#080808;background-image:none;overflow:hidden}
+#tour-image canvas{display:block;width:100%;height:100%}
+#tour-back,.tour-footer{display:none!important}
