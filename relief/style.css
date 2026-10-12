@@ -476,3 +476,5 @@ body,.stage{background:var(--chrome);color:var(--ink)}.stage::after{display:none
 #settings-panel input[type=range]::-moz-range-track{background:var(--muted)}#settings-panel input[type=range]::-moz-range-thumb{background:var(--chrome);border-color:var(--ink)}
 #tour-close,#tour-back,#tour-next{background:var(--chrome);color:var(--ink)}.tour-footer{color:var(--muted)}
 body[data-theme=light] .tour-text{background:#fff;color:#111}
+
+#loop-progress{stroke-width:1px;vector-effect:non-scaling-stroke;stroke-linecap:butt}
