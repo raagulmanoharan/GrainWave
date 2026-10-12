@@ -170,7 +170,7 @@ function drawTracked(w,h){
 const grainInput=document.createElement('canvas'),grainInputContext=grainInput.getContext('2d',{willReadFrequently:true}),grainFallback=new GrainProcessor();let grainWorker=null,grainBusy=false;
 function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
 try{grainWorker=new Worker('grain-worker.js?v=fine-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
-function drawGrain(w,h,time){updateCellContrast(time);
+function drawGrain(w,h,time){
  if(!grainBusy&&(time-lastGrain>=33||!grainData)){
   const width=Math.max(1,Math.floor(Math.min(960,w*Math.min(devicePixelRatio,2),Math.sqrt(1200000*w/h)))),height=Math.max(1,Math.round(width*h/w));
   if(grainInput.width!==width||grainInput.height!==height){grainInput.width=width;grainInput.height=height}
@@ -202,5 +202,7 @@ const aboutPhoto=document.querySelector('.settings-about img');
 function ditherAboutPhoto(){if(!aboutPhoto.naturalWidth)return;const c=document.createElement('canvas');c.width=1280;c.height=960;const x=c.getContext('2d');x.drawImage(aboutPhoto,0,0,1280,960);const frame=x.getImageData(0,0,1280,960);const tones=[12,54,108,174,228];for(let i=0;i<frame.data.length;i+=4){const lum=(frame.data[i]*.2126+frame.data[i+1]*.7152+frame.data[i+2]*.0722)/255;let h=Math.imul((i/4+1)^0x9e3779b9,0x45d9f3b);h=Math.imul(h^(h>>>16),0x45d9f3b);const noise=((h^(h>>>16))>>>0)/4294967296-.5;const signal=Math.max(0,Math.min(1,(lum-.48)*1.08+.5+noise*.17));const level=tones[Math.min(4,Math.floor(signal*5))];frame.data[i]=frame.data[i+1]=frame.data[i+2]=level}x.putImageData(frame,0,0);c.setAttribute('role','img');c.setAttribute('aria-label',aboutPhoto.alt);aboutPhoto.hidden=true;aboutPhoto.after(c)}
 if(aboutPhoto.complete)ditherAboutPhoto();else aboutPhoto.addEventListener('load',ditherAboutPhoto,{once:true});
 
-let lastCellContrast=0;
-function updateCellContrast(time){if(time-lastCellContrast<200||!grainData||document.body.dataset.settings||document.body.dataset.onboarding)return;lastCellContrast=time;const bounds=canvas.getBoundingClientRect(),{data,width,height}=grainData;for(const button of document.querySelectorAll('#loop-stack .loop-block,#loop-tools button')){if(!button.getClientRects().length)continue;const r=button.getBoundingClientRect();let light=0;for(let y=1;y<=5;y++)for(let x=1;x<=5;x++){const px=Math.max(0,Math.min(width-1,Math.floor((r.left-bounds.left+r.width*x/6)/bounds.width*width))),py=Math.max(0,Math.min(height-1,Math.floor((r.top-bounds.top+r.height*y/6)/bounds.height*height)));light+=data[(py*width+px)*4]/255}const average=light/25,wasDark=button.dataset.darkFill==='true',dark=wasDark?average>.43:average>.57;button.dataset.darkFill=String(dark);button.style.setProperty('--cell-fill',dark?'#080808':'#f4f4ef');button.style.setProperty('--cell-edge',dark?'#ffffff30':'#00000030')}}
+
+let theme='dark';try{theme=localStorage.getItem('relief-theme')==='light'?'light':'dark'}catch{}
+function applyTheme(value){document.body.dataset.theme=value;$('light-mode').checked=value==='light';document.querySelector('meta[name="theme-color"]').content=value==='light'?'#ffffff':'#080808';try{localStorage.setItem('relief-theme',value)}catch{}}
+applyTheme(theme);$('light-mode').onchange=()=>applyTheme($('light-mode').checked?'light':'dark');

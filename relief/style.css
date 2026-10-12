@@ -456,3 +456,23 @@ body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mod
 #loop-stack .loop-block i{position:absolute}
 #loop-stack .loop-block::before,#loop-tools button::before,#loop-tools #play::before,#loop-stack .loop-block::after,#loop-tools button::after,#loop-tools #play::after{content:none}
 #loop-stack .loop-block,#loop-stack .loop-block.selected,#loop-stack .loop-block.paused,#loop-tools button,#loop-tools #play{background:var(--cell-fill,#f4f4ef);border-top:1px solid var(--cell-edge,#00000030)}
+
+/* Fixed theme chrome surrounds a central camera viewport. */
+body{--chrome:#080808;--ink:#f4f4ef;--hairline:#ffffff25;--muted:#ffffff80}
+body[data-theme=light]{--chrome:#fff;--ink:#111;--hairline:#00000025;--muted:#00000080}
+body,.stage{background:var(--chrome);color:var(--ink)}.stage::after{display:none}
+.stage #cloud{position:absolute;left:calc(var(--frame-left) + var(--grid-cell));top:calc(var(--frame-top) + var(--grid-cell));width:calc(100% - var(--frame-left) - var(--frame-right) - var(--grid-cell)*2);height:calc(100% - var(--frame-top) - var(--frame-bottom) - var(--grid-cell)*2)}
+.margin-frame,body:not([data-settings=true]):not([data-onboarding=true]) .margin-frame{mix-blend-mode:normal}
+.margin-frame span,body:not([data-settings=true]):not([data-onboarding=true]) .margin-frame span{background:var(--hairline)}
+#open-settings,#flip-camera,#live-layer,#capture-loop,#loop-flow,#status,body:not([data-settings=true]):not([data-onboarding=true]) #open-settings,body:not([data-settings=true]):not([data-onboarding=true]) #flip-camera,body:not([data-settings=true]):not([data-onboarding=true]) #live-layer,body:not([data-settings=true]):not([data-onboarding=true]) #loop-flow,body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mode:normal;background:var(--chrome);color:var(--ink)}
+#capture-loop{color:#ff453a}#capture-loop::before,#play::before{background:var(--chrome)}
+#loop-stack .loop-block,#loop-stack .loop-block.selected,#loop-stack .loop-block.paused,#loop-tools button,#loop-tools #play{background:var(--chrome);border-top-color:var(--hairline)}
+#settings-panel,#settings-panel .settings-grid,#settings-panel #settings-title,#settings-panel .settings-top button,#settings-panel .settings-about p{background:var(--chrome);color:var(--ink)}
+#settings-panel .settings-group h2,#settings-panel .settings-group output,#settings-panel .settings-about p{color:var(--muted)}
+#settings-panel .settings-group label,#settings-panel .settings-top,#settings-panel .settings-top button{color:var(--ink)}
+#settings-panel .settings-group h2,#settings-panel .settings-group label{border-color:var(--hairline)}
+#settings-panel input[type=checkbox],#settings-panel #settings-flip-camera{border-color:var(--muted)}#settings-panel input[type=checkbox]:checked::after{background:var(--ink)}
+#settings-panel input[type=range]::-webkit-slider-runnable-track{background:var(--muted)}#settings-panel input[type=range]::-webkit-slider-thumb{background:var(--chrome);border-color:var(--ink)}
+#settings-panel input[type=range]::-moz-range-track{background:var(--muted)}#settings-panel input[type=range]::-moz-range-thumb{background:var(--chrome);border-color:var(--ink)}
+#tour-close,#tour-back,#tour-next{background:var(--chrome);color:var(--ink)}.tour-footer{color:var(--muted)}
+body[data-theme=light] .tour-text{background:#fff;color:#111}
