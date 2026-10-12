@@ -1,4 +1,4 @@
-import {MotionTracker} from './motion.js?v=contrast-motion-1';
+import {MotionTracker} from './motion.js?v=raw-stability-1';
 const tracker=new MotionTracker({enhance:true});
 self.onmessage=({data:d})=>{
  if(d.type==='reset'){tracker.reset();return}
