@@ -1,0 +1,3 @@
+Relief pipeline diagram, generated from actual TrackingContrast, MotionTracker and GrainProcessor outputs.
+Input is a previously generated traffic photograph. A controlled consecutive-frame study displaced one car region against a fixed background; the real MotionTracker yielded two motion groups. This demonstrates the implementation, not a measured real traffic recording.
+Tracking uses luminance + local contrast, persistent feature matching, camera-motion/brightness compensation, movement thresholds and temporal checks, followed by grouping into motion nodes. Display threshold+dither is a separate branch; texture pixels are not note sources.
