@@ -8,7 +8,7 @@ const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
 import {Onboarding} from './onboarding.js?v=full-flowers-1';
 import {GrainProcessor} from './grain-process.js?v=fresh-1';
-import {AmbientBed} from './ambient.js?v=arrival-1';
+import {AmbientBed} from './ambient.js?v=lofi-budget-1';
 let ambientBed=null;
 import {LandingType} from './landing-type.js?v=cells-1';
 const landingType=new LandingType();
@@ -82,7 +82,7 @@ function render(time){if(audio?.state==='running')ambientBed?.advance();const d=
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){
- if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+ if(!audio){const Context=window.AudioContext||window.webkitAudioContext;try{audio=new Context({latencyHint:'interactive',sampleRate:32000})}catch{audio=new Context({latencyHint:'interactive'})}}
  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}
  const resumed=audio.resume();resumed.catch(()=>{});
  if(audio.state!=='running'){
@@ -91,7 +91,7 @@ function unlockAudio(){
  }
 }
 async function setupAudio(){unlockAudio();if(audioSetupPending)return audioSetupPending;audioSetupPending=initializeAudio();try{await audioSetupPending}catch(error){if(!audioReady){try{await audio?.close()}catch{}audio=null;master=null;delay=null;wet=null;reverbWet=null;delayFeedback=null;feedbackShaper=null}throw error}finally{audioSetupPending=null}}
-async function initializeAudio(){if(!audioReady){await audio.audioWorklet.addModule('pulse-worklet.js?v=four-loops-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);master.connect(delay);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='2x';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(2,audio.sampleRate*1.1,audio.sampleRate);for(let c=0;c<2;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;master.connect(convolver);reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor);audioReady=true}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);if(!uiSounds)uiSounds=new UISounds(audio);updateDistortion()}
+async function initializeAudio(){if(!audioReady){await audio.audioWorklet.addModule('pulse-worklet.js?v=lofi-budget-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);master.connect(delay);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='none';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(1,audio.sampleRate*.9,audio.sampleRate);for(let c=0;c<1;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;master.connect(convolver);reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor);audioReady=true}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);if(!uiSounds)uiSounds=new UISounds(audio);updateDistortion()}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{numberOfOutputs:1,outputChannelCount:[2]});output.instrument.connect(output,0);}return output.instrument}
 function perform(time){
  const copyBeat=Math.floor(time/10000);if(copyBeat!==lastCopyBeat){lastCopyBeat=copyBeat;updateLoopStatus()}
