@@ -1,4 +1,4 @@
-import {Headphones} from './headphones.js?v=flowers-1';
+import {Headphones} from './headphones.js?v=full-flowers-1';
 const key='relief-tour-v1';
 export class Onboarding{
  constructor({onOpen,onFinish}){this.onOpen=onOpen;this.onFinish=onFinish;this.panel=document.getElementById('onboarding');this.fontsReady=Promise.all([document.fonts.load('600 32px ReliefCondensed'),document.fonts.load('400 16px ReliefPixel')]).catch(()=>{});this.active=false;this.headphones=new Headphones(document.getElementById('tour-image'));this.seen=false;try{this.seen=localStorage.getItem(key)==='done'}catch{}
