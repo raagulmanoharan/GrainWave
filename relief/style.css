@@ -478,3 +478,18 @@ body,.stage{background:var(--chrome);color:var(--ink)}.stage::after{display:none
 body[data-theme=light] .tour-text{background:#fff;color:#111}
 
 #loop-progress{stroke-width:1px;vector-effect:non-scaling-stroke;stroke-linecap:butt}
+
+/* Unfold the guide from its center seam; retain the fixed grid. */
+body[data-onboarding=true] #landing-type{visibility:visible}
+#onboarding:not([hidden]) .tour-middle{animation:guide-unfold .5s cubic-bezier(.22,.75,.2,1) both}
+#onboarding:not([hidden]) #tour-image{animation:guide-image-settle .55s cubic-bezier(.22,.75,.2,1) both}
+#onboarding:not([hidden]) .tour-text{animation:guide-copy-settle .55s cubic-bezier(.22,.75,.2,1) both}
+#onboarding:not([hidden]) #tour-close,#onboarding:not([hidden]) #tour-back,#onboarding:not([hidden]) #tour-next,#onboarding:not([hidden]) .tour-footer{animation:guide-controls .24s ease-out .2s both}
+#onboarding.closing .tour-middle{animation:guide-fold .24s ease-in both}
+#onboarding.closing #tour-close,#onboarding.closing #tour-back,#onboarding.closing #tour-next,#onboarding.closing .tour-footer{animation:guide-controls .18s ease-in reverse both}
+@keyframes guide-unfold{from{clip-path:inset(50% 0 50% 0);opacity:.5}to{clip-path:inset(0);opacity:1}}
+@keyframes guide-fold{to{clip-path:inset(50% 0 50% 0);opacity:0}}
+@keyframes guide-image-settle{from{transform:translateY(14px)}to{transform:translateY(0)}}
+@keyframes guide-copy-settle{from{transform:translateY(-14px)}to{transform:translateY(0)}}
+@keyframes guide-controls{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#onboarding:not([hidden]) .tour-middle,#onboarding:not([hidden]) #tour-image,#onboarding:not([hidden]) .tour-text,#onboarding:not([hidden]) #tour-close,#onboarding:not([hidden]) #tour-back,#onboarding:not([hidden]) #tour-next,#onboarding:not([hidden]) .tour-footer{animation:none}}

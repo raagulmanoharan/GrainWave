@@ -1,0 +1,5 @@
+// Short tactile cues, on the existing audio context, outside the musical mix.
+export class UISounds{
+ constructor(context){this.context=context;this.bus=context.createGain();this.bus.gain.value=.022;this.bus.connect(context.destination);this.last=-Infinity;this.voices=new Set()}
+ play(kind='tap'){const ctx=this.context;if(ctx.state!=='running'||ctx.currentTime-this.last<.06||this.voices.size>=4)return;this.last=ctx.currentTime;const notes=kind==='keep'?[440,659.25]:kind==='close'?[329.63]:kind==='next'?[659.25]:[523.25];notes.forEach((freq,index)=>{const osc=ctx.createOscillator(),gain=ctx.createGain(),start=ctx.currentTime+index*.045,end=start+.09;osc.type='sine';osc.frequency.setValueAtTime(freq,start);osc.frequency.exponentialRampToValueAtTime(freq*(kind==='close'?.7:.88),end);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.8,start+.006);gain.gain.exponentialRampToValueAtTime(.0001,end);osc.connect(gain);gain.connect(this.bus);this.voices.add(osc);osc.onended=()=>{this.voices.delete(osc);osc.disconnect();gain.disconnect()};osc.start(start);osc.stop(end+.005)})}
+}
