@@ -440,3 +440,8 @@ body:not([data-settings=true]):not([data-onboarding=true]) #status{mix-blend-mod
 #loop-stack .loop-block.selected span{text-decoration:underline;text-underline-offset:5px}
 #loop-stack .loop-block i{background:#080808;height:2px}
 #loop-tools button,#loop-tools #play{background:var(--selected-loop-color);color:#080808;mix-blend-mode:normal;border:0;border-top:1px solid #00000018}
+/* Neutral filled cells; loop identity lives in type and progress. */
+#loop-stack .loop-block,#loop-stack .loop-block.selected,#loop-stack .loop-block.paused{background:#080808;color:var(--loop-color);opacity:1;mix-blend-mode:normal}
+#loop-stack .loop-block.paused span{opacity:.6}
+#loop-stack .loop-block i{background:var(--loop-color)}
+#loop-tools button,#loop-tools #play{background:#080808;color:var(--selected-loop-color);mix-blend-mode:normal;border-top:1px solid #ffffff18}
