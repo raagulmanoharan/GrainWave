@@ -506,3 +506,8 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 .headphone-square{position:absolute;width:3px;height:3px;background:var(--square-color);animation:headphone-blip 3s steps(3,end) infinite;animation-play-state:paused;pointer-events:none}
 @keyframes headphone-blip{0%,15%,100%{opacity:0}20%,28%{opacity:1}35%{opacity:.3}40%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.headphone-square{animation:none;opacity:.5}}
+/* Guide copy scales to its own grid cell, including browser chrome changes. */
+.tour-text{container-type:size;justify-content:safe center;gap:10px;padding:clamp(10px,2.8vw,20px)}
+#tour-title{font-size:clamp(22px,min(9.8cqw,10cqh),32px);line-height:.98;letter-spacing:-.6px}
+#tour-copy{font-size:clamp(11px,min(4.8cqw,3.7cqh),14px);line-height:1.42;max-width:none}
+@media(max-height:650px){.tour-middle{grid-template-rows:minmax(0,.35fr) minmax(0,.65fr)}.tour-text{padding:10px;gap:8px}#tour-title{font-size:20px}#tour-copy{font-size:10px;line-height:1.35}}
