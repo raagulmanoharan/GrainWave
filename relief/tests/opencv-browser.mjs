@@ -45,7 +45,7 @@ try{
   const texture=new PrintTexture();texture.draw(c,64,64);const cached=texture.pattern;texture.draw(c,64,64);
   return {colored,onset,middle,cached:cached===texture.pattern,filter:getComputedStyle(document.querySelector('#feed')).filter};
  });
- console.log({preview});assert.equal(preview.colored,0);assert.equal(preview.onset,0);assert(preview.middle>0&&preview.middle<80);assert(preview.cached);assert(preview.filter.includes('contrast(1.8)'));
+ console.log({preview});assert.equal(preview.colored,0);assert.equal(preview.onset,0);assert(preview.middle>0&&preview.middle<80);assert(preview.cached);assert(preview.filter.includes('contrast(1.9)'));assert(preview.filter.includes('invert(1)'));
 
 
  // Verify real GPU block sampling, fine grain, and a live shader preview.
@@ -91,6 +91,36 @@ try{
  });
  console.log({regionalTone});assert.equal(regionalTone.outside,0);assert(regionalTone.noiseRatio>5);assert(regionalTone.cleared);assert.equal(regionalTone.regionOnlyUploads,1);assert(regionalTone.detailDifference>60);assert.equal(regionalTone.error,0);
  for(const s of regionalTone.sizes){assert(s.width<=320&&s.height<=640&&s.width*s.height<=160000)}
+
+ // Fine mosaic keeps sub-cell detail, inverts tones and reverts exactly.
+ const mosaicCheck=await page.evaluate(async()=>{
+  const {PixelPreview}=await import('./pixel-preview.js?v=mosaic-1');
+  const {tonePixels}=await import('./preview-tone.js?v=mosaic-1');
+  const source=document.createElement('canvas');source.width=source.height=64;const c=source.getContext('2d');
+  const out=document.createElement('canvas'),effect=new PixelPreview(out),gl=effect.gl;
+  const read=()=>{const p=new Uint8Array(64*64*4);gl.readPixels(0,0,64,64,gl.RGBA,gl.UNSIGNED_BYTE,p);return p};
+  for(let x=0;x<64;x++){c.fillStyle=x%2?'rgb(150,150,150)':'rgb(100,100,100)';c.fillRect(x,0,1,64)}
+  effect.draw(source,64,64,.65,false,0,[],false);const original=read();
+  effect.draw(source,64,64,.65,false,0,[],true);const mosaic=read();
+  let even=0,odd=0;for(let y=16;y<48;y++)for(let x=16;x<48;x++){if(x%2)odd+=mosaic[(y*64+x)*4];else even+=mosaic[(y*64+x)*4]}
+  effect.draw(source,64,64,.65,false,0,[],false);const reverted=read().every((v,i)=>v===original[i]);
+  c.fillStyle='rgb(80,80,80)';c.fillRect(0,0,64,64);
+  effect.draw(source,64,64,.65,false,0,[],true);const darkInput=read()[0];
+  c.fillStyle='rgb(180,180,180)';c.fillRect(0,0,64,64);
+  effect.draw(source,64,64,.65,false,0,[],true);const lightInput=read()[0];
+  const echo=new Uint8ClampedArray([80,80,80,255]);tonePixels(echo,.65,true);
+  return {reverted,invertedDetail:(even-odd)/(32*16),darkInput,lightInput,echo:echo[0],error:gl.getError()};
+ });
+ console.log({mosaicCheck});assert(mosaicCheck.reverted);assert(mosaicCheck.invertedDetail>40);assert(mosaicCheck.darkInput>mosaicCheck.lightInput+100);assert(mosaicCheck.echo>180);assert.equal(mosaicCheck.error,0);
+ // User-facing rollback is immediate and persists across reload.
+ await page.locator('#open-settings').click();await page.locator('#original-look').check();
+ assert(await page.locator('#feed').evaluate(v=>!v.style.filter.includes('invert')));
+ await page.reload();assert(await page.locator('#original-look').isChecked());
+ assert(await page.locator('#feed').evaluate(v=>!v.style.filter.includes('invert')));
+ await page.locator('#open-settings').click();await page.locator('#original-look').uncheck();
+ assert(await page.locator('#feed').evaluate(v=>v.style.filter.includes('invert(1)')));
+ await page.locator('[data-close]').click();await page.locator('#cloud').click();
+ await page.waitForTimeout(1000);
 
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
  // Count presented frames, not callback invocations: software WebGL can delay JS callbacks.

@@ -1,6 +1,7 @@
-import {PixelPreview} from './pixel-preview.js?v=motion-tone-1';
-import {previewFilter,PrintTexture} from './preview-tone.js?v=exposure-1';
+import {PixelPreview} from './pixel-preview.js?v=mosaic-1';
+import {previewFilter,PrintTexture} from './preview-tone.js?v=mosaic-1';
 const printTexture=new PrintTexture();
+let mosaicLook=true;try{mosaicLook=localStorage.getItem('relief-view-style')!=='original'}catch{}
 import {CameraFrames,analysisSize} from './camera-frames.js?v=budget-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
@@ -20,7 +21,7 @@ import {VisualLoop} from './visual-loop.js?v=opencv-only-1';
 const visualLoop=new VisualLoop();let loopHighlights=[];
 import {SceneMemory} from './scene-memory.js?v=splice-1';
 const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
-import {MotionEcho} from './motion-echo.js?v=exposure-1';
+import {MotionEcho} from './motion-echo.js?v=mosaic-1';
 import {pulsePitch} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
 import {complementaryPitch} from './layer-harmony.js?v=natural-1';
@@ -49,7 +50,7 @@ let noteBudget=10,wet=null,reverbWet=null,delayFeedback=null,feedbackShaper=null
 let stream=null,threshold=.5,cameraBusy=false,cameraGeneration=0,frame=0,audio,master,delay,playing=false,liveRunning=false,audioStarting=false;
 let currentPitch=null;
 function status(text){$('status').textContent=text||motionFailure}
-function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=previewFilter(threshold);rebuildNotes()}
+function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=previewFilter(threshold,mosaicLook);rebuildNotes()}
 function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
 function releaseCamera(){cameraFrames.reset();clearGestureRun();visualDistortion.reset();visualLoop.reset();loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();tracked=[];tracker.reset();expression.reset();motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 let cameraStartPending=null;
@@ -79,7 +80,7 @@ $('camera').onclick=startCamera;
 $('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
 $('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset();loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
 
-function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){const pixelsReady=pixelPreview.draw(video,w,h,threshold,$('mirror-toggle').checked,.16,playing&&liveRunning&&!motionTracker.cameraUncertain?motionSources.filter(p=>p.confirmed&&time-p.time<300):[]);pixelCanvas.hidden=!pixelsReady;video.style.visibility=pixelsReady?'hidden':'visible';if(playing&&motionEcho.frames.length){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}else visualDistortion.reset();if(!pixelsReady)printTexture.draw(ctx,w,h)}else{pixelCanvas.hidden=true;video.style.visibility='visible';ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
+function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){const pixelsReady=pixelPreview.draw(video,w,h,threshold,$('mirror-toggle').checked,.16,playing&&liveRunning&&!motionTracker.cameraUncertain?motionSources.filter(p=>p.confirmed&&time-p.time<300):[],mosaicLook);pixelCanvas.hidden=!pixelsReady;video.style.visibility=pixelsReady?'hidden':'visible';if(playing&&motionEcho.frames.length){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}else visualDistortion.reset();if(!pixelsReady)printTexture.draw(ctx,w,h)}else{pixelCanvas.hidden=true;video.style.visibility='visible';ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){
@@ -119,7 +120,7 @@ function perform(time){
   loopHighlights.push({point:event.point,loopId:event.loopId,start:event.at,end:event.at+180});
  }
 
- if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(motionCanvas,state.point,time,+$('pulse').value,threshold);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
+ if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(motionCanvas,state.point,time,+$('pulse').value,threshold,mosaicLook);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
@@ -204,3 +205,11 @@ applyTheme(theme);$('light-mode').onchange=()=>applyTheme($('light-mode').checke
 document.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;const kind=button.id==='capture-loop'?'keep':button.id==='tour-next'?'next':button.matches('[data-close],#tour-close')?'close':'tap';try{if(!uiSounds)await setupAudio();else if(audio.state==='suspended')await audio.resume();uiSounds?.play(kind)}catch{} },{capture:true});
 document.addEventListener('change',e=>{if(e.target.matches('input[type=checkbox],select'))uiSounds?.play('tap')});
 
+
+// One persisted style preference; switching clears snapshots from the previous tone.
+$('original-look').checked=!mosaicLook;
+$('original-look').onchange=()=>{
+ mosaicLook=!$('original-look').checked;
+ try{localStorage.setItem('relief-view-style',mosaicLook?'mosaic':'original')}catch{}
+ motionEcho.reset();visualDistortion.reset();updateThreshold(threshold);
+};

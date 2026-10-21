@@ -1,12 +1,12 @@
 // Shared preview tone; detector and optical-flow input remain untouched.
 export function previewBrightness(depth){return 1.3-depth*.45}
-export function previewFilter(depth){return `grayscale(1) brightness(${previewBrightness(depth)}) contrast(1.8)`}
-export function tonePixels(data,depth){
+export function previewFilter(depth,mosaic=false){return `grayscale(1) brightness(${previewBrightness(depth)}) contrast(${mosaic?1.9:1.8})${mosaic?' invert(1)':''}`}
+export function tonePixels(data,depth,mosaic=false){
  const brightness=previewBrightness(depth);
  for(let i=0;i<data.length;i+=4){
   const gray=(data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722)*brightness;
-  const value=Math.max(0,Math.min(255,(gray-127.5)*1.8+127.5));
-  data[i]=data[i+1]=data[i+2]=value;
+  const value=Math.max(0,Math.min(255,(gray-127.5)*(mosaic?1.9:1.8)+127.5));
+  data[i]=data[i+1]=data[i+2]=mosaic?255-value:value;
  }
 }
 // A fixed print texture avoids temporal noise/flicker and per-frame pixel work.
