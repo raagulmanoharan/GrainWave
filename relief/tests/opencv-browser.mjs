@@ -29,8 +29,10 @@ try{
  const ui=await page.evaluate(()=>({video:document.querySelector('#feed').readyState,nativeDisplay:getComputedStyle(document.querySelector('#feed')).display,playing:document.body.dataset.mode,tracking:document.querySelector('#tracking-state').textContent,status:document.querySelector('#status').textContent}));
  console.log({ui,errors});assert.equal(ui.nativeDisplay,'block');assert(ui.video>=2);assert.equal(ui.playing,'playing');assert(!ui.status.includes('could not load'));assert.deepEqual(errors,[]);
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
- await page.route('**/opencv.js',route=>route.abort());await page.reload();await page.waitForTimeout(2000);
- assert((await page.locator('#status').textContent()).includes('could not load'));
- assert(await page.locator('#feed').evaluate(v=>v.readyState>=2));
+ const cadence=await page.evaluate(()=>new Promise(resolve=>{const video=document.querySelector('#feed');let count=0;const begin=performance.now();const next=()=>{count++;if(performance.now()-begin>=2000)resolve(count);else video.requestVideoFrameCallback(next)};video.requestVideoFrameCallback(next)}));console.log({videoFramesInTwoSeconds:cadence});assert(cadence>=25,'Video must continue while tracking runs');
+ const blocked=await browser.newPage();await blocked.context().route('**/opencv.js',route=>route.abort());await blocked.goto('http://127.0.0.1:8765/relief/index.html');
+ await blocked.waitForFunction(()=>document.querySelector('#status').textContent.includes('could not load'),{},{timeout:10000});
+ assert(await blocked.locator('#feed').evaluate(v=>v.readyState>=2));
+ await blocked.close();
  console.log('OpenCV worker, motion scenes, live app and runtime-failure checks passed');
 }finally{await browser.close();server.close()}
