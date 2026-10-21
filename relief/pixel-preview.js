@@ -1,3 +1,4 @@
+import {previewBrightness} from './preview-tone.js?v=exposure-1';
 // GPU-only preview: one camera upload per new frame, no CPU pixel readback.
 export class PixelPreview{
  constructor(canvas){
@@ -46,7 +47,7 @@ void main(){
    gl.viewport(0,0,width,height);gl.useProgram(this.program);gl.bindTexture(gl.TEXTURE_2D,this.texture);
    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);
    const ratio=(sw/sh)/(w/h);gl.uniform2f(u.crop,Math.min(1,1/ratio),Math.min(1,ratio));
-   gl.uniform2f(u.resolution,width,height);gl.uniform1f(u.block,4*d);gl.uniform1f(u.brightness,1.65-depth*.45);gl.uniform1f(u.mirror,mirror?1:0);gl.uniform1f(u.grain,grain);
+   gl.uniform2f(u.resolution,width,height);gl.uniform1f(u.block,4*d);gl.uniform1f(u.brightness,previewBrightness(depth));gl.uniform1f(u.mirror,mirror?1:0);gl.uniform1f(u.grain,grain);
    gl.drawArrays(gl.TRIANGLES,0,6);this.key=key;return true;
   }catch{this.ready=false;return false}
  }

@@ -1,5 +1,5 @@
 // Shared preview tone; detector and optical-flow input remain untouched.
-export function previewBrightness(depth){return 1.65-depth*.45}
+export function previewBrightness(depth){return 1.3-depth*.45}
 export function previewFilter(depth){return `grayscale(1) brightness(${previewBrightness(depth)}) contrast(1.8)`}
 export function tonePixels(data,depth){
  const brightness=previewBrightness(depth);

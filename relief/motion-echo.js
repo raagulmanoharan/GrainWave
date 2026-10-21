@@ -1,4 +1,4 @@
-import {tonePixels} from './preview-tone.js?v=print-1';
+import {tonePixels} from './preview-tone.js?v=exposure-1';
 // Visual snapshots share the half-beat spacing and feedback decay of the audio delay.
 export class MotionEcho {
  constructor(){this.frames=[];this.pool=[]}

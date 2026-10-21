@@ -1,5 +1,5 @@
-import {PixelPreview} from './pixel-preview.js?v=pixels-1';
-import {previewFilter,PrintTexture} from './preview-tone.js?v=pixels-1';
+import {PixelPreview} from './pixel-preview.js?v=exposure-1';
+import {previewFilter,PrintTexture} from './preview-tone.js?v=exposure-1';
 const printTexture=new PrintTexture();
 import {CameraFrames} from './camera-frames.js?v=presented-1';
 import {UISounds} from './ui-sounds.js';
@@ -20,7 +20,7 @@ import {VisualLoop} from './visual-loop.js?v=opencv-only-1';
 const visualLoop=new VisualLoop();let loopHighlights=[];
 import {SceneMemory} from './scene-memory.js?v=splice-1';
 const sceneMemory=new SceneMemory();let lastAccent=-Infinity,accent=null;
-import {MotionEcho} from './motion-echo.js?v=print-1';
+import {MotionEcho} from './motion-echo.js?v=exposure-1';
 import {pulsePitch} from './arrangement.js?v=loop-1';
 import {PhraseSong as MotifSong} from './phrase.js?v=timed-2';
 import {complementaryPitch} from './layer-harmony.js?v=natural-1';
