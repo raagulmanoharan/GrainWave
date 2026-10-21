@@ -40,6 +40,24 @@ try{
  await page.waitForTimeout(7000);
  const ui=await page.evaluate(()=>({video:document.querySelector('#feed').readyState,nativeDisplay:getComputedStyle(document.querySelector('#feed')).display,playing:document.body.dataset.mode,tracking:document.querySelector('#tracking-state').textContent,status:document.querySelector('#status').textContent}));
  console.log({ui,errors});assert.equal(ui.nativeDisplay,'block');assert(ui.video>=2);assert.equal(ui.playing,'playing');assert(!ui.status.includes('could not load'));assert.deepEqual(errors,[]);
+
+ // A saturated motion snapshot must never reintroduce color; onset is continuous.
+ const preview=await page.evaluate(async()=>{
+  const {MotionEcho}=await import('./motion-echo.js?v=print-1');
+  const {PrintTexture}=await import('./preview-tone.js?v=print-1');
+  const source=document.createElement('canvas');source.width=source.height=64;
+  const s=source.getContext('2d');s.fillStyle='#ff0000';s.fillRect(0,0,64,64);
+  const echo=new MotionEcho();echo.capture(source,{x:.5,y:.5,box:{x:0,y:0,w:1,h:1}},0,120);
+  const pixels=echo.frames[0].image.getContext('2d').getImageData(0,0,64,64).data;
+  let colored=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!==pixels[i+1]||pixels[i]!==pixels[i+2])colored++;
+  const output=document.createElement('canvas');output.width=output.height=64;const c=output.getContext('2d');
+  echo.draw(c,64,64,250,.6);const onset=c.getImageData(32,32,1,1).data[3];
+  echo.draw(c,64,64,400,.6);const middle=c.getImageData(32,32,1,1).data[3];
+  const texture=new PrintTexture();texture.draw(c,64,64);const cached=texture.pattern;texture.draw(c,64,64);
+  return {colored,onset,middle,cached:cached===texture.pattern,filter:getComputedStyle(document.querySelector('#feed')).filter};
+ });
+ console.log({preview});assert.equal(preview.colored,0);assert.equal(preview.onset,0);assert(preview.middle>0&&preview.middle<80);assert(preview.cached);assert(preview.filter.includes('contrast(1.8)'));
+
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
  const cadence=await page.evaluate(()=>new Promise(resolve=>{const video=document.querySelector('#feed');let count=0;const begin=performance.now();const next=()=>{count++;if(performance.now()-begin>=2000)resolve(count);else video.requestVideoFrameCallback(next)};video.requestVideoFrameCallback(next)}));console.log({videoFramesInTwoSeconds:cadence});assert(cadence>=25,'Video must continue while tracking runs');
  const blocked=await browser.newPage();await blocked.context().route('**/opencv.js',route=>route.abort());await blocked.goto('http://127.0.0.1:8765/relief/index.html');
