@@ -16,3 +16,10 @@ export class CameraFrames {
  }
  reset(){this.consumed.clear()}
 }
+
+// Bound CPU readback and optical-flow work without changing the visible crop.
+export function analysisSize(viewWidth,viewHeight){
+ const aspect=viewHeight/Math.max(1,viewWidth);
+ const width=Math.max(1,Math.floor(Math.min(320,640/aspect,Math.sqrt(160000/aspect))));
+ return {width,height:Math.max(1,Math.floor(width*aspect))};
+}

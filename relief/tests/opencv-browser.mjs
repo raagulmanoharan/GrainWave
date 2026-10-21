@@ -64,6 +64,23 @@ try{
  });
  console.log({pixelCheck});assert(pixelCheck.plain);assert(pixelCheck.sameBlock);assert(pixelCheck.changed>100);assert.equal(pixelCheck.colored,0);assert.equal(pixelCheck.error,0);assert(pixelCheck.live);assert.equal(pixelCheck.videoVisibility,'hidden');
 
+ // Motion grain stays inside detected boxes and reuses its texture.
+ const regionalGrain=await page.evaluate(async()=>{
+  const {MotionGrain}=await import('./motion-grain.js?v=regions-1');
+  const {analysisSize}=await import('./camera-frames.js?v=budget-1');
+  const c=document.createElement('canvas');c.width=c.height=64;const ctx=c.getContext('2d'),grain=new MotionGrain();
+  const reset=()=>{ctx.fillStyle='rgb(128,128,128)';ctx.fillRect(0,0,64,64)};reset();
+  const region={confirmed:true,time:100,box:{x:.25,y:.25,w:.5,h:.5}};
+  grain.draw(ctx,64,64,[region],100);const cached=grain.pattern,data=ctx.getImageData(0,0,64,64).data;let inside=0,outside=0;
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){if(data[(y*64+x)*4]!==128){if(x>=16&&x<48&&y>=16&&y<48)inside++;else outside++}}
+  grain.draw(ctx,64,64,[region],100);const reused=grain.pattern===cached;reset();grain.draw(ctx,64,64,[region],500);
+  const expiredChanged=ctx.getImageData(0,0,64,64).data.some((v,i)=>i%4!==3&&v!==128);
+  const sizes=[[390,720],[260,650],[1280,600]].map(([w,h])=>analysisSize(w,h));
+  return {inside,outside,reused,expiredChanged,sizes};
+ });
+ console.log({regionalGrain});assert(regionalGrain.inside>500);assert.equal(regionalGrain.outside,0);assert(regionalGrain.reused);assert(!regionalGrain.expiredChanged);
+ for(const s of regionalGrain.sizes){assert(s.width<=320&&s.height<=640&&s.width*s.height<=160000)}
+
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
  // Count presented frames, not callback invocations: software WebGL can delay JS callbacks.
  const cadence=await page.evaluate(()=>new Promise(resolve=>{
@@ -82,8 +99,8 @@ try{
  const motionPage=await browser.newPage({viewport:{width:390,height:720}});
  const requests=[];motionPage.on('request',r=>requests.push(r.url()));
  await motionPage.addInitScript(()=>{
-  window.liveTones=0;window.moveFixture=false;window.workerURLs=[];
-  const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(url,...args){super(url,...args);window.workerURLs.push(String(url))}};
+  window.liveTones=0;window.moveFixture=false;window.workerURLs=[];window.motionFramesSent=0;
+  const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(url,...args){super(url,...args);window.workerURLs.push(String(url))}postMessage(message,...args){if(message?.type==='frame')window.motionFramesSent++;return super.postMessage(message,...args)}};
   const send=MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage=function(message,...args){if(message?.type==='tone'&&message.role==='lead')window.liveTones++;return send.call(this,message,...args)};
   navigator.mediaDevices.getUserMedia=async()=>{
@@ -105,6 +122,9 @@ try{
  await motionPage.evaluate(()=>window.moveFixture=false);
  await motionPage.waitForTimeout(1800);const stopped=await motionPage.evaluate(()=>window.liveTones);
  await motionPage.waitForTimeout(1000);assert.equal(await motionPage.evaluate(()=>window.liveTones),stopped,'Stopped movement releases live notes');
+ await motionPage.locator('#open-settings').click();await motionPage.waitForTimeout(300);
+ const heldFrames=await motionPage.evaluate(()=>window.motionFramesSent);await motionPage.waitForTimeout(700);
+ assert.equal(await motionPage.evaluate(()=>window.motionFramesSent),heldFrames,'Analysis pauses while settings hold live generation');
  const workerURLs=await motionPage.evaluate(()=>window.workerURLs);
  assert.equal(workerURLs.length,1);assert(workerURLs[0].includes('motion-worker.js'));
  assert(!requests.some(url=>/tensorflow|tfjs|coco-ssd|object-worker|hand_landmarker|vision_bundle/.test(url)),'No old detection models requested');
