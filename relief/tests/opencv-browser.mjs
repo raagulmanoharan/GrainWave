@@ -141,10 +141,10 @@ try{
  const motionPage=await browser.newPage({viewport:{width:390,height:720}});
  const requests=[];motionPage.on('request',r=>requests.push(r.url()));
  await motionPage.addInitScript(()=>{
-  window.liveTones=0;window.moveFixture=false;window.workerURLs=[];window.motionFramesSent=0;
+  window.toneMessages=[];window.liveTones=0;window.moveFixture=false;window.workerURLs=[];window.motionFramesSent=0;
   const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(url,...args){super(url,...args);window.workerURLs.push(String(url))}postMessage(message,...args){if(message?.type==='frame')window.motionFramesSent++;return super.postMessage(message,...args)}};
   const send=MessagePort.prototype.postMessage;
-  MessagePort.prototype.postMessage=function(message,...args){if(message?.type==='tone'&&message.role==='lead')window.liveTones++;return send.call(this,message,...args)};
+  MessagePort.prototype.postMessage=function(message,...args){if(message?.type==='tone'){window.toneMessages.push(message);if(message.role==='lead')window.liveTones++;}return send.call(this,message,...args)};
   navigator.mediaDevices.getUserMedia=async()=>{
    const c=document.createElement('canvas');c.width=160;c.height=320;const ctx=c.getContext('2d');
    const bg=document.createElement('canvas');bg.width=c.width;bg.height=c.height;const b=bg.getContext('2d'),data=b.createImageData(c.width,c.height);
@@ -167,6 +167,33 @@ try{
  await motionPage.locator('#open-settings').click();await motionPage.waitForTimeout(300);
  const heldFrames=await motionPage.evaluate(()=>window.motionFramesSent);await motionPage.waitForTimeout(700);
  assert.equal(await motionPage.evaluate(()=>window.motionFramesSent),heldFrames,'Analysis pauses while settings hold live generation');
+
+ await motionPage.locator('[data-close]').click();
+ await motionPage.locator('#echo-toggle').click();
+ assert.equal(await motionPage.locator('#echo-toggle').getAttribute('aria-pressed'),'true');
+ await motionPage.locator('#capture-loop').click();
+ assert.equal(await motionPage.locator('#echo-target').textContent(),'LOOP 1');
+ assert.equal(await motionPage.locator('#echo-toggle').getAttribute('aria-pressed'),'true','KEEP inherits live echo');
+ await motionPage.waitForFunction(()=>window.toneMessages.some(t=>t.role==='echo:loop:1'),{},{timeout:10000});
+ await motionPage.locator('#live-toggle').click();
+ await motionPage.waitForTimeout(300);
+ const paused=await motionPage.evaluate(()=>({frames:window.motionFramesSent,live:window.liveTones,loops:window.toneMessages.filter(t=>t.role==='loop:1').length}));
+ await motionPage.evaluate(()=>window.moveFixture=true);
+ await motionPage.waitForTimeout(2500);
+ const afterPause=await motionPage.evaluate(()=>({frames:window.motionFramesSent,live:window.liveTones,loops:window.toneMessages.filter(t=>t.role==='loop:1').length}));
+ assert.equal(afterPause.frames,paused.frames);assert.equal(afterPause.live,paused.live);assert(afterPause.loops>paused.loops,'Saved loop keeps playing while live is paused');
+ await motionPage.locator('#echo-toggle').click();
+ const echoesOff=await motionPage.evaluate(()=>window.toneMessages.filter(t=>t.role==='echo:loop:1').length);
+ await motionPage.waitForTimeout(1800);
+ assert.equal(await motionPage.evaluate(()=>window.toneMessages.filter(t=>t.role==='echo:loop:1').length),echoesOff);
+ await motionPage.locator('[data-loop-id="1"]').click();
+ assert.equal(await motionPage.locator('#echo-toggle').getAttribute('aria-pressed'),'true','Live echo stays independent');
+ await motionPage.locator('#live-toggle').click();
+ await motionPage.waitForFunction(previous=>window.liveTones>previous,paused.live,{timeout:20000});
+ await motionPage.waitForFunction(()=>window.toneMessages.some(t=>t.role==='echo:lead'),{},{timeout:10000});
+ const liveEcho=await motionPage.evaluate(()=>window.toneMessages.find(t=>t.role==='echo:lead'));
+ assert(await motionPage.evaluate(freq=>window.toneMessages.some(t=>t.role==='lead'&&t.freq===freq),liveEcho.freq));
+ console.log('Echo inheritance, loop toggle, live pause/resume and independent playback passed');
  const workerURLs=await motionPage.evaluate(()=>window.workerURLs);
  assert.equal(workerURLs.length,1);assert(workerURLs[0].includes('motion-worker.js'));
  assert(!requests.some(url=>/tensorflow|tfjs|coco-ssd|object-worker|hand_landmarker|vision_bundle/.test(url)),'No old detection models requested');

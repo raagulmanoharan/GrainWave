@@ -28,7 +28,9 @@ import {complementaryPitch} from './layer-harmony.js?v=natural-1';
 import {loopStatus} from './loop-status.js?v=keep-flow-1';
 const loopColors=['#0a84ff','#ffd60a','#30d158','#bf8cff'];
 let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
-import {LoopRack} from './note-buffer.js?v=rack-1';
+import {LoopRack} from './note-buffer.js?v=echo-1';
+import {NoteEcho} from './note-echo.js?v=echo-1';
+const noteEcho=new NoteEcho();let liveEcho=false;
 const noteBuffer=new LoopRack();
 let song=new MotifSong(Math.random,{generative:true});
 
@@ -46,12 +48,12 @@ let songStep=0,nextSongTime=0;
 let motionReady=false,motionFailure='',lastMotionSample=-Infinity;
 let facing='environment',tracked=[],motionSources=[];const motionCanvas=document.createElement('canvas'),mc=motionCanvas.getContext('2d',{willReadFrequently:true});
 const motionTracker={cameraUncertain:false,reset(){this.cameraUncertain=false;lastMotionSample=-Infinity}},tracker=new PointTracker();
-let noteBudget=10,wet=null,reverbWet=null,delayFeedback=null,feedbackShaper=null;
-let stream=null,threshold=.5,cameraBusy=false,cameraGeneration=0,frame=0,audio,master,delay,playing=false,liveRunning=false,audioStarting=false;
+let noteBudget=10,reverbWet=null;
+let stream=null,threshold=.5,cameraBusy=false,cameraGeneration=0,frame=0,audio,master,playing=false,liveRunning=false,audioStarting=false;
 let currentPitch=null;
 function status(text){$('status').textContent=text||motionFailure}
 function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=previewFilter(threshold,mosaicLook);rebuildNotes()}
-function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
+function clearGestureRun(){cancelEcho('lead');pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
 function releaseCamera(){cameraFrames.reset();clearGestureRun();visualDistortion.reset();visualLoop.reset();loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();tracked=[];tracker.reset();expression.reset();motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 let cameraStartPending=null;
 async function startCamera(){if(cameraStartPending)return cameraStartPending;cameraStartPending=initializeCamera();try{await cameraStartPending}finally{cameraStartPending=null}}
@@ -92,9 +94,40 @@ function unlockAudio(){
   source.connect(audio.destination);source.onended=()=>source.disconnect();source.start();
  }
 }
-async function setupAudio(){unlockAudio();if(audioSetupPending)return audioSetupPending;audioSetupPending=initializeAudio();try{await audioSetupPending}catch(error){if(!audioReady){try{await audio?.close()}catch{}audio=null;master=null;delay=null;wet=null;reverbWet=null;delayFeedback=null;feedbackShaper=null}throw error}finally{audioSetupPending=null}}
-async function initializeAudio(){if(!audioReady){await audio.audioWorklet.addModule('pulse-worklet.js?v=lofi-budget-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);delay=audio.createDelay(1);master.connect(delay);delay.delayTime.value=60/+$('pulse').value/2;const feedback=audio.createGain();delayFeedback=feedback;feedbackShaper=audio.createWaveShaper();feedbackShaper.oversample='none';wet=audio.createGain();feedback.gain.value=.32;wet.gain.value=+$('echo').value/180;delay.connect(feedbackShaper);feedbackShaper.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(compressor);const convolver=audio.createConvolver(),impulse=audio.createBuffer(1,audio.sampleRate*.9,audio.sampleRate);for(let c=0;c<1;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;master.connect(convolver);reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor);audioReady=true}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);if(!uiSounds)uiSounds=new UISounds(audio);updateDistortion()}
+async function setupAudio(){unlockAudio();if(audioSetupPending)return audioSetupPending;audioSetupPending=initializeAudio();try{await audioSetupPending}catch(error){if(!audioReady){try{await audio?.close()}catch{}audio=null;master=null;reverbWet=null}throw error}finally{audioSetupPending=null}}
+async function initializeAudio(){if(!audioReady){await audio.audioWorklet.addModule('pulse-worklet.js?v=lofi-budget-1');master=audio.createGain();master.gain.value=.6;const compressor=audio.createDynamicsCompressor();compressor.threshold.value=-18;master.connect(compressor);compressor.connect(audio.destination);const convolver=audio.createConvolver(),impulse=audio.createBuffer(1,audio.sampleRate*.9,audio.sampleRate);for(let c=0;c<1;c++){const data=impulse.getChannelData(c);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,3)}convolver.buffer=impulse;master.connect(convolver);reverbWet=audio.createGain();reverbWet.gain.value=+$('reverb').value/100;reverbWet.inputNode=convolver;convolver.connect(reverbWet);reverbWet.connect(compressor);audioReady=true}await audio.resume();if(!ambientBed)ambientBed=new AmbientBed(audio,master);instrument(master);if(!uiSounds)uiSounds=new UISounds(audio);updateDistortion()}
 function instrument(output){if(!output.instrument){output.instrument=new AudioWorkletNode(audio,'relief-pulse',{numberOfOutputs:1,outputChannelCount:[2]});output.instrument.connect(output,0);}return output.instrument}
+function playTone(tone,echoEnabled){
+ tone.time??=audio.currentTime;
+ instrument(master).port.postMessage(tone);
+ if(echoEnabled)noteEcho.add(tone,60/+$('pulse').value/2);
+}
+function cancelEcho(role){
+ noteEcho.cancel(role);
+ master?.instrument?.port.postMessage({type:'release-role',role:'echo:'+role});
+}
+function setLiveRunning(value){
+ liveRunning=value;expression.reset();clearGestureRun();tracked=[];motionSources=[];
+ if(!value){cancelEcho('lead');master?.instrument?.port.postMessage({type:'release-role',role:'lead'})}
+ syncPreview();
+}
+function syncPerformanceControls(){
+ const selected=noteBuffer.selection,enabled=selected?selected.echo:liveEcho;
+ $('echo-toggle').setAttribute('aria-pressed',String(enabled));
+ $('echo-toggle').setAttribute('aria-label',`Echo for ${selected?'loop '+selected.id:'live recording'}`);
+ $('echo-target').textContent=selected?'LOOP '+selected.id:'LIVE';
+ $('echo-toggle').style.color=selected?loopColors[(selected.id-1)%4]:'var(--ink)';
+ $('live-toggle').setAttribute('aria-pressed',String(!liveRunning));
+ $('live-toggle').setAttribute('aria-label',liveRunning?'Pause live note generation':'Resume live note generation');
+ $('live-toggle').textContent=liveRunning?'PAUSE LIVE':'RESUME LIVE';
+}
+$('echo-toggle').onclick=()=>{
+ const selected=noteBuffer.selection;
+ if(selected){selected.echo=!selected.echo;if(!selected.echo)cancelEcho('loop:'+selected.id)}
+ else{liveEcho=!liveEcho;if(!liveEcho)cancelEcho('lead')}
+ syncPerformanceControls();
+};
+$('live-toggle').onclick=()=>{if(playing)setLiveRunning(!liveRunning)};
 function perform(time){
  const copyBeat=Math.floor(time/10000);if(copyBeat!==lastCopyBeat){lastCopyBeat=copyBeat;updateLoopStatus()}
  if(capturedNoticeUntil&&time>=capturedNoticeUntil){capturedNoticeUntil=0;syncPreview()}
@@ -116,19 +149,20 @@ function perform(time){
  }
  for(const event of noteBuffer.due(time+80)){
   const when=audio.currentTime+Math.max(0,(event.at-time)/1000);
-  instrument(master).port.postMessage({type:'tone',kind:'bell',role:`loop:${event.loopId}`,monophonic:false,effectSend:0,duration:1.8,level:(.13+(event.velocity||0)*.08)/Math.sqrt(Math.max(1,noteBuffer.loops.filter(l=>!l.paused).length)),freq:440*2**((event.midi-69)/12),time:when,pan:(event.point.x-.5)*1.2});
+  playTone({type:'tone',kind:'bell',role:`loop:${event.loopId}`,monophonic:false,effectSend:0,duration:1.8,level:(.13+(event.velocity||0)*.08)/Math.sqrt(Math.max(1,noteBuffer.loops.filter(l=>!l.paused).length)),freq:440*2**((event.midi-69)/12),time:when,pan:(event.point.x-.5)*1.2},event.echo);
   loopHighlights.push({point:event.point,loopId:event.loopId,start:event.at,end:event.at+180});
  }
 
- if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(motionCanvas,state.point,time,+$('pulse').value,threshold,mosaicLook);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
+ if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(motionCanvas,state.point,time,+$('pulse').value,threshold,mosaicLook);playTone({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2},liveEcho);
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
- while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2});visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});syncLoopButton()}
+ while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});playTone({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2},liveEcho);visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});syncLoopButton()}
+ for(const tone of noteEcho.due(audio.currentTime))instrument(master).port.postMessage(tone);
 }
-function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',noteBuffer.selection?!noteBuffer.selection.paused:liveRunning);$('play').classList.toggle('layer-ready',!noteBuffer.selection&&Boolean(noteBuffer.loops.length)&&!liveRunning);$('play').setAttribute('aria-label',noteBuffer.selection?(noteBuffer.selection.paused?'Play selected loop':'Pause selected loop'):liveRunning?'Pause live generation':noteBuffer.loops.length?'Layer live generation over loop':'Start the live instrument');$('play-label').textContent=noteBuffer.selection?(noteBuffer.selection.paused?'PLAY':'PAUSE'):liveRunning?'HOLD':'+ LIVE';$('live-state').textContent=playing?'PLAYING':'LIVE';updateLoopStatus()}
+function syncPreview(){syncPerformanceControls();landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',noteBuffer.selection?!noteBuffer.selection.paused:liveRunning);$('play').classList.toggle('layer-ready',!noteBuffer.selection&&Boolean(noteBuffer.loops.length)&&!liveRunning);$('play').setAttribute('aria-label',noteBuffer.selection?(noteBuffer.selection.paused?'Play selected loop':'Pause selected loop'):liveRunning?'Pause live generation':noteBuffer.loops.length?'Layer live generation over loop':'Start the live instrument');$('play-label').textContent=noteBuffer.selection?(noteBuffer.selection.paused?'PLAY':'PAUSE'):liveRunning?'HOLD':'+ LIVE';$('live-state').textContent=playing?'PLAYING':'LIVE';updateLoopStatus()}
 function updateLoopStatus(){const text=playing?loopStatus({loops:noteBuffer.loops,selection:noteBuffer.selection,live:liveRunning,noteCount:noteBuffer.notes.length,saved:performance.now()<capturedNoticeUntil,beat:Math.floor(performance.now()/10000)}):'';const hint=playing&&liveRunning&&!noteBuffer.loops.length&&noteBuffer.notes.length<8?(noteBuffer.notes.length?'Higher in view = higher notes.\nMove faster for a little run.':'Hold the camera steady.\nWave a hand in view to play.'):text;if($('loop-flow').textContent!==hint)$('loop-flow').textContent=hint}
-function stop(){pendingArpeggio=[];motionArpeggio.reset();noteBuffer.locked=null;syncLoopButton();ambientBed?.stop();visualLoop.reset();loopHighlights=[];accent=null;motionEcho.reset();playing=false;liveRunning=false;song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=0;expression.reset();currentPitch=null;master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
+function stop(){noteEcho.clear();pendingArpeggio=[];motionArpeggio.reset();noteBuffer.locked=null;syncLoopButton();ambientBed?.stop();visualLoop.reset();loopHighlights=[];accent=null;motionEcho.reset();playing=false;liveRunning=false;song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=0;expression.reset();currentPitch=null;master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
 function syncLoopButton(){const b=$('capture-loop');b.disabled=!noteBuffer.notes.length||noteBuffer.loops.length>=4;b.setAttribute('aria-pressed',String(Boolean(noteBuffer.loops.length)));b.setAttribute('aria-label',noteBuffer.loops.length>=4?'Four loops captured':'Save your recent notes as a loop');b.querySelector('.capture-label').textContent=noteBuffer.loops.length>=4?'FULL':'KEEP';syncLoopRack();updateLoopStatus()}
 let rackViewKey=null;
 function syncLoopRack(){
@@ -140,26 +174,26 @@ function syncLoopRack(){
  if(noteBuffer.selection){canvas.parentElement.style.setProperty('--selected-loop-color',loopColors[(noteBuffer.selected-1)%4])}
  updateLoopStatus();
 }
-function releaseSelected(){if(noteBuffer.selection)instrument(master).port.postMessage({type:'release-role',role:`loop:${noteBuffer.selected}`})}
-$('capture-loop').onclick=()=>{if(!noteBuffer.capture(performance.now()))return;capturedNoticeUntil=performance.now()+1800;lastLayerPitch=null;liveRunning=true;visualLoop.looping=true;syncLoopButton();syncPreview()};
+function releaseSelected(){if(noteBuffer.selection){cancelEcho('loop:'+noteBuffer.selected);instrument(master).port.postMessage({type:'release-role',role:`loop:${noteBuffer.selected}`})}}
+$('capture-loop').onclick=()=>{if(!noteBuffer.capture(performance.now(),liveEcho))return;capturedNoticeUntil=performance.now()+1800;lastLayerPitch=null;visualLoop.looping=true;syncLoopButton();syncPreview()};
 for(const [id,factor] of [['loop-half',.5],['loop-double',2]])$(id).onclick=()=>{releaseSelected();noteBuffer.speed(factor,performance.now());syncLoopRack()};
 for(const [id,octave] of [['loop-down',-12],['loop-up',12]])$(id).onclick=()=>{releaseSelected();noteBuffer.transpose(octave);syncLoopRack()};
-$('play').onclick=async()=>{if(playing){if(noteBuffer.selection){releaseSelected();noteBuffer.togglePause(performance.now());syncLoopRack();syncPreview()}else if(noteBuffer.loops.length){liveRunning=!liveRunning;expression.reset();syncPreview()}else stop();return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;visualLoop.reset();loopHighlights=[];song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=audio.currentTime;playing=true;liveRunning=true;ambientBed.start();master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
+$('play').onclick=async()=>{if(playing){if(noteBuffer.selection){releaseSelected();noteBuffer.togglePause(performance.now());syncLoopRack();syncPreview()}else setLiveRunning(!liveRunning);return}if(!stream||audioStarting)return;audioStarting=true;try{await setupAudio();if(!stream)return;expression.reset();currentPitch=null;visualLoop.reset();loopHighlights=[];song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=audio.currentTime;playing=true;liveRunning=true;ambientBed.start();master.gain.setTargetAtTime(.6,audio.currentTime,.08);syncPreview();status('')}catch(e){status(`Audio could not start: ${e.message}`)}finally{audioStarting=false}};
 $('threshold').oninput=()=>updateThreshold(+$('threshold').value/100);
 $('scale').onchange=()=>{mergeTracking(performance.now())};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();releaseCamera();cancelAnimationFrame(frame)}else{frame=requestAnimationFrame(render);startCamera()}});window.addEventListener('pagehide',()=>{stop();releaseCamera();cancelAnimationFrame(frame)});
 
 function setBudget(value){noteBudget=Math.max(1,Math.min(24,Math.round(value)));$('notes-out').textContent=noteBudget;rebuildNotes()}
 $('note-budget').oninput=()=>setBudget(+$('note-budget').value);
-$('pulse').oninput=()=>{if(delay&&audio)delay.delayTime.setTargetAtTime(60/+$('pulse').value/2,audio.currentTime,.1)};
+
 const settingsPanel=$('settings-panel');canvas.parentElement.append(settingsPanel);let resumeLiveAfterSettings=false;
-function closeSettings(){settingsPanel.close();delete document.body.dataset.settings;liveRunning=resumeLiveAfterSettings&&playing;expression.reset();syncPreview()}
-$('open-settings').onclick=()=>{resumeLiveAfterSettings=liveRunning;liveRunning=false;expression.reset();master?.instrument?.port.postMessage({type:'release-role',role:'lead'});document.body.dataset.settings='true';settingsPanel.show();syncPreview()};
+function closeSettings(){settingsPanel.close();delete document.body.dataset.settings;setLiveRunning(resumeLiveAfterSettings&&playing)}
+$('open-settings').onclick=()=>{resumeLiveAfterSettings=liveRunning;setLiveRunning(false);document.body.dataset.settings='true';settingsPanel.show();syncPreview()};
 document.querySelector('[data-close]').onclick=closeSettings;
 document.addEventListener('keydown',e=>{if(settingsPanel.open&&e.key==='Escape'){e.preventDefault();closeSettings()}});
 
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
-$('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
+$('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`};
 setBudget(10);
 initMotion();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
@@ -183,7 +217,7 @@ function drawTracked(w,h){
 }
 
 
-function updateDistortion(){const amount=+$('distortion').value/100;$('distortion-out').textContent=`${Math.round(amount*100)}%`;master?.instrument?.port.postMessage({type:'drive',amount});if(delayFeedback&&audio)delayFeedback.gain.setTargetAtTime(.32+amount*.16,audio.currentTime,.05);if(feedbackShaper){const curve=new Float32Array(2048);for(let i=0;i<curve.length;i++){const x=i*2/(curve.length-1)-1;curve[i]=(1-amount)*x+amount*Math.tanh(x*(1+amount*4))/(1+amount*2)}feedbackShaper.curve=curve}}
+function updateDistortion(){const amount=+$('distortion').value/100;$('distortion-out').textContent=`${Math.round(amount*100)}%`;master?.instrument?.port.postMessage({type:'drive',amount})}
 $('distortion').oninput=updateDistortion;updateDistortion();
 
 // Unlock the ambient welcome on the first browser-authorized interaction.

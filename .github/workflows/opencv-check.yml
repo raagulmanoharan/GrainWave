@@ -1,7 +1,7 @@
 name: OpenCV browser checks
 on:
   push:
-    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic]
+    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic, loop-echo]
     paths: ['relief/**', '.github/workflows/opencv-check.yml']
   workflow_dispatch:
 permissions:
@@ -19,4 +19,5 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: for file in relief/*.js; do node --check "$file" || exit 1; done
       - run: node relief/tests/expression.mjs
+      - run: node relief/tests/note-echo.mjs
       - run: node relief/tests/opencv-browser.mjs
