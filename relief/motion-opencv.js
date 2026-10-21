@@ -72,7 +72,13 @@ class OpenCVMotion {
     for(let i=0;i<corners.rows&&survivors.length<240;i++)survivors.push({id:++this.serial,x:corners.data32F[2*i],y:corners.data32F[2*i+1],hits:0});
    }
    this.features=survivors;this.frames++;
-   result.sources.sort((a,b)=>Math.hypot(b.dx,b.dy)-Math.hypot(a.dx,a.dy));result.sources=result.sources.slice(0,maximum);
+   result.sources.sort((a,b)=>Math.hypot(b.dx,b.dy)-Math.hypot(a.dx,a.dy));const distinct=[];
+   for(const source of result.sources){
+    const b=source.box;
+    if(distinct.some(p=>{const a=p.box,intersection=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));return intersection/Math.max(1e-9,Math.min(a.w*a.h,b.w*b.h))>.35}))continue;
+    distinct.push(source);if(distinct.length>=maximum)break;
+   }
+   result.sources=distinct;
    this.objects=result.sources;
    this.previous?.delete();this.previous=gray.clone();
    return {...result,sources:result.sources.map(({features,...p})=>p)};
