@@ -11,6 +11,7 @@ function match(a,b,w,h,p,bias,gx=0,gy=0,early=1.5){
  check(0,0);if(best.cost<early)return best;
  for(let dy=-8;dy<=8;dy+=2)for(let dx=-8;dx<=8;dx+=2)check(dx,dy);
  const cx=best.dx-gx,cy=best.dy-gy;for(let dy=cy-1;dy<=cy+1;dy++)for(let dx=cx-1;dx<=cx+1;dx++)check(dx,dy);
+ const sx=best.dx-gx,sy=best.dy-gy;for(let dy=sy-.5;dy<=sy+.5;dy+=.5)for(let dx=sx-.5;dx<=sx+.5;dx+=.5)check(dx,dy);
  return best;
 }
 
@@ -23,12 +24,22 @@ export class MotionTracker{
  if(!this.previous||this.previous.length!==image.length){this.reset();this.previous=image;this.rawPrevious=rawImage?.slice();this.lastTime=time;this.frame=1;return []}
  const interval=Math.max(1,time-this.lastTime);this.lastTime=time;
  const prior=this.previous,differences=[];for(let i=0;i<image.length;i+=23)differences.push(image[i]-prior[i]);const bias=median(differences),rawDifferences=[];if(this.enhancer)for(let i=0;i<rawImage.length;i+=23)rawDifferences.push(rawImage[i]-this.rawPrevious[i]);const rawBias=this.enhancer?median(rawDifferences):bias,global=globalFlow(this.enhancer?rawImage:image,this.enhancer?this.rawPrevious:prior,w,h,rawBias);this.cameraMotion={x:global.x/w,y:global.y/h};this.cameraUncertain=global.cost>10;
- const moving=[],next=[];if(!this.cameraUncertain){for(const p of this.features){const forward=match(prior,image,w,h,p,-bias,global.x,global.y,this.enhancer?.6:1.5),q={x:p.x+forward.dx,y:p.y+forward.dy},back=match(image,prior,w,h,q,bias,-global.x,-global.y,this.enhancer?.6:1.5),errorLimit=Math.max(this.enhancer?10:7,contrast(prior,w,h,p)*(this.enhancer?.14:.1));if(forward.cost>errorLimit||back.cost>errorLimit||Math.hypot(forward.dx+back.dx,forward.dy+back.dy)>.75)continue;const rx=forward.dx-global.x,ry=forward.dy-global.y,supported=!this.enhancer||patchCost(this.rawPrevious,rawImage,w,h,p.x,p.y,forward.dx,forward.dy,-rawBias)<patchCost(this.rawPrevious,rawImage,w,h,p.x,p.y,global.x,global.y,-rawBias)-.3;next.push({...p,...q,rx,ry,previousRx:p.rx,previousRy:p.ry,supported})}}
+ const moving=[],next=[];if(!this.cameraUncertain){for(const p of this.features){const forward=match(prior,image,w,h,p,-bias,global.x,global.y,this.enhancer?.6:1.5),q={x:p.x+forward.dx,y:p.y+forward.dy},back=match(image,prior,w,h,q,bias,-global.x,-global.y,this.enhancer?.6:1.5),errorLimit=Math.max(this.enhancer?10:7,contrast(prior,w,h,p)*(this.enhancer?.14:.1));if(forward.cost>errorLimit||back.cost>errorLimit||Math.hypot(forward.dx+back.dx,forward.dy+back.dy)>.75)continue;const rx=forward.dx-global.x,ry=forward.dy-global.y,stillCost=patchCost(this.enhancer?this.rawPrevious:prior,this.enhancer?rawImage:image,w,h,p.x,p.y,global.x,global.y,-rawBias),moveCost=patchCost(this.enhancer?this.rawPrevious:prior,this.enhancer?rawImage:image,w,h,p.x,p.y,forward.dx,forward.dy,-rawBias),supported=stillCost-moveCost>Math.max(.6,stillCost*.18);next.push({...p,...q,rx,ry,previousRx:p.rx,previousRy:p.ry,supported})}}
  // A broad, coherent rotation is camera shake, not an object trajectory.
  const rotationCells=new Map();for(const p of next){const x=p.x-w/2,y=p.y-h/2,r2=x*x+y*y;if(r2<(Math.min(w,h)*.18)**2)continue;const key=Math.floor(p.x/w*4)+Math.floor(p.y/h*4)*4;if(!rotationCells.has(key))rotationCells.set(key,[]);rotationCells.get(key).push((-p.rx*y+p.ry*x)/r2)}
  const angles=[...rotationCells.values()].map(values=>median(values)),angle=angles.length>=8?median(angles):0,spread=angles.length?median(angles.map(a=>Math.abs(a-angle))):Infinity,rotation=angles.length>=8&&Math.abs(angle)<.012&&spread<.0015?angle:0;
- const threshold=Math.max(.45,(.45+(1-clamp(sensitivity,0,1))*.4)*clamp(interval/60,.7,1.5))+(Math.hypot(global.x,global.y)>.2?.2:0);
- for(const p of next){p.rx+=rotation*(p.y-h/2);p.ry-=rotation*(p.x-w/2);const speed=Math.hypot(p.rx,p.ry),consistent=!p.hits||p.rx*p.previousRx+p.ry*p.previousRy>0;p.hits=speed>threshold&&p.supported?(consistent?p.hits+1:1):0;if(p.hits>=2&&speed>threshold)moving.push(p)}
+ const threshold=Math.max(.25,(.25+(1-clamp(sensitivity,0,1))*.35)*clamp(interval/60,.5,2))+(Math.hypot(global.x,global.y)>.2?.15:0);
+ // Accumulate consistent evidence across brief subpixel pauses, never emit on a pause.
+ for(const p of next){
+  p.rx+=rotation*(p.y-h/2);p.ry-=rotation*(p.x-w/2);
+  const speed=Math.hypot(p.rx,p.ry),supported=speed>threshold&&p.supported;
+  if(supported){
+   const consistent=p.hits&&time-(p.lastEvidence||0)<=180&&p.rx*p.motionRx+p.ry*p.motionRy>0;
+   p.hits=consistent?p.hits+1:1;p.motionMs=consistent?(p.motionMs||0)+interval:interval;
+   p.lastEvidence=time;p.motionRx=p.rx;p.motionRy=p.ry;
+   if(p.hits>=3&&p.motionMs>=120)moving.push(p);
+  }else if(time-(p.lastEvidence||0)>180){p.hits=0;p.motionMs=0}
+ }
  // Reserve feature capacity across the whole scene; foliage cannot consume it all.
  const cellKey=p=>Math.floor(p.x/w*8)+8*Math.floor(p.y/h*12),buckets=new Map();
  for(const p of corners(image,w,h)){const residual=Math.abs(sample(image,w,h,p.x,p.y)-sample(prior,w,h,p.x-global.x,p.y-global.y)-bias);p.priority=p.score+Math.max(0,residual-6)*12;const key=cellKey(p);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(p)}
@@ -38,8 +49,8 @@ export class MotionTracker{
  this.previous=image;this.rawPrevious=rawImage?.slice();this.frame++;
  // Compensate ordinary camera travel; silence only unreliable frame alignment.
  if(this.cameraUncertain){this.state='camera';for(const p of this.features)p.hits=0;this.objects=[];return []}this.state=this.frame<6?'learning':'ready';if(this.frame<6)return [];
- const groups=[];for(const p of moving){let group=groups.find(g=>g.some(q=>Math.hypot(p.x-q.x,p.y-q.y)<Math.max(13,w*.14)&&Math.hypot(p.rx-q.rx,p.ry-q.ry)<1.5));if(group)group.push(p);else groups.push([p])}
- const old=this.objects,used=new Set(),out=[];for(const group of groups){if(group.length<2)continue;const x=median(group.map(p=>p.x)),y=median(group.map(p=>p.y)),featureIds=new Set(group.map(p=>p.id));let previous=old.find(o=>!used.has(o.id)&&o.featureIds.some(id=>featureIds.has(id)));if(!previous)previous=old.find(o=>!used.has(o.id)&&Math.hypot(o.x*w-x,o.y*h-y)<14);const id=previous?.id||`motion-${++this.nextId}`;used.add(id);const minX=Math.min(...group.map(p=>p.x))-3,minY=Math.min(...group.map(p=>p.y))-3,maxX=Math.max(...group.map(p=>p.x))+3,maxY=Math.max(...group.map(p=>p.y))+3;const speed=median(group.map(p=>Math.hypot(p.rx,p.ry)));out.push({id,name:'object',confirmed:true,x:x/w,y:y/h,time,dx:median(group.map(p=>p.rx))/w,dy:median(group.map(p=>p.ry))/h,interval,velocity:clamp(.24+speed*.025,.24,.5),z:.6,energy:1,featureIds:[...featureIds],box:{x:minX/w,y:minY/h,w:(maxX-minX)/w,h:(maxY-minY)/h}});for(const p of group){const xx=Math.round(p.x),yy=Math.round(p.y);this.foreground[yy*w+xx]=1}}
+ const groups=[];for(const p of moving){let group=groups.find(g=>g.some(q=>Math.hypot(p.x-q.x,p.y-q.y)<Math.max(10,w*.07)&&Math.hypot(p.rx-q.rx,p.ry-q.ry)<1.5));if(group)group.push(p);else groups.push([p])}
+ const old=this.objects,used=new Set(),out=[];for(const group of groups){if(group.length<2)continue;const netX=median(group.map(p=>p.rx)),netY=median(group.map(p=>p.ry)),coherence=Math.hypot(netX,netY)/Math.max(.001,median(group.map(p=>Math.hypot(p.rx,p.ry))));if(coherence<.75)continue;const x=median(group.map(p=>p.x)),y=median(group.map(p=>p.y)),featureIds=new Set(group.map(p=>p.id));let previous=old.find(o=>!used.has(o.id)&&o.featureIds.some(id=>featureIds.has(id)));if(!previous)previous=old.find(o=>!used.has(o.id)&&Math.hypot(o.x*w-x,o.y*h-y)<14);const id=previous?.id||`motion-${++this.nextId}`;used.add(id);const minX=Math.min(...group.map(p=>p.x))-3,minY=Math.min(...group.map(p=>p.y))-3,maxX=Math.max(...group.map(p=>p.x))+3,maxY=Math.max(...group.map(p=>p.y))+3;const speed=median(group.map(p=>Math.hypot(p.rx,p.ry)));out.push({id,name:'object',confirmed:true,x:x/w,y:y/h,time,dx:median(group.map(p=>p.rx))/w,dy:median(group.map(p=>p.ry))/h,interval,velocity:clamp(.24+speed*.025,.24,.5),z:.6,energy:1,featureIds:[...featureIds],box:{x:minX/w,y:minY/h,w:(maxX-minX)/w,h:(maxY-minY)/h}});for(const p of group){const xx=Math.round(p.x),yy=Math.round(p.y);this.foreground[yy*w+xx]=1}}
  this.objects=out.sort((a,b)=>Math.hypot(b.dx,b.dy)-Math.hypot(a.dx,a.dy)).slice(0,maximum);return this.objects.map(({featureIds,...p})=>p)
  }
 }

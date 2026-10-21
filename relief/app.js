@@ -29,10 +29,10 @@ let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
 import {LoopRack} from './note-buffer.js?v=rack-1';
 const noteBuffer=new LoopRack();
 let song=new MotifSong(Math.random,{generative:true});
-import {MotionTracker} from './motion.js?v=motion-clean-1';
-import {MotionExpression} from './expression.js?v=motion-clean-1';
+import {MotionTracker} from './motion.js?v=motion-evidence-1';
+import {MotionExpression} from './expression.js?v=motion-evidence-1';
 import {pitch} from './music.js';
-import {PointTracker} from './tracking.js?v=motion-clean-1';
+import {PointTracker} from './tracking.js?v=motion-evidence-1';
 const expression=new MotionExpression(),motionEcho=new MotionEcho();
 let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
 import {fitCover} from './dither.js';
@@ -66,8 +66,8 @@ function mergeTracking(time){
 }
 
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
-function receiveMotion(d){if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=motion-clean-1',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionWidth=320;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null;motionWidth=320}}
+function receiveMotion(d){if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
+function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=motion-evidence-1',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionWidth=320;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null;motionWidth=320}}
 function sampleVideo(){if(video.readyState<2)return;
  const time=performance.now();if(!motionBusy&&cameraFrames.take('motion',cameraGeneration)){motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}
