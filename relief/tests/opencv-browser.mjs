@@ -179,7 +179,7 @@ try{
  await motionPage.waitForTimeout(300);
  const paused=await motionPage.evaluate(()=>({frames:window.motionFramesSent,live:window.liveTones,loops:window.toneMessages.filter(t=>t.role==='loop:1').length}));
  await motionPage.evaluate(()=>window.moveFixture=true);
- await motionPage.waitForTimeout(2500);
+ await motionPage.waitForFunction(count=>window.toneMessages.filter(t=>t.role==='loop:1').length>count,paused.loops,{timeout:15000});
  const afterPause=await motionPage.evaluate(()=>({frames:window.motionFramesSent,live:window.liveTones,loops:window.toneMessages.filter(t=>t.role==='loop:1').length}));
  assert.equal(afterPause.frames,paused.frames);assert.equal(afterPause.live,paused.live);assert(afterPause.loops>paused.loops,'Saved loop keeps playing while live is paused');
  await motionPage.locator('#echo-toggle').click();

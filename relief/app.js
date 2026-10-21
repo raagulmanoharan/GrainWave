@@ -108,7 +108,7 @@ function cancelEcho(role){
 }
 function setLiveRunning(value){
  liveRunning=value;expression.reset();clearGestureRun();tracked=[];motionSources=[];
- if(!value){cancelEcho('lead');master?.instrument?.port.postMessage({type:'release-role',role:'lead'})}
+ if(!value)master?.instrument?.port.postMessage({type:'release-role',role:'lead'});
  syncPreview();
 }
 function syncPerformanceControls(){
