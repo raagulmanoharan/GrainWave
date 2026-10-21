@@ -17,6 +17,6 @@ jobs:
           node-version: '22'
       - run: npm install --no-save playwright@1.56.1
       - run: npx playwright install --with-deps chromium
-      - run: node --check relief/app.js
+      - run: for file in relief/*.js; do node --check "$file" || exit 1; done
       - run: node relief/tests/expression.mjs
       - run: node relief/tests/opencv-browser.mjs

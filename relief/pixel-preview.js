@@ -12,11 +12,11 @@ export class PixelPreview{
    const gl=this.canvas.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false});
    if(!gl)return;this.gl=gl;
    const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s};
-   const vs=shader(gl.VERTEX_SHADER,'attribute vec2 position;vec2 cameraUV(vec2 uv){uv.x=mix(uv.x,1.-uv.x,mirror);return (uv-.5)*crop+.5;}
-void main(){gl_Position=vec4(position,0.,1.);}');
+   const vs=shader(gl.VERTEX_SHADER,'attribute vec2 position;void main(){gl_Position=vec4(position,0.,1.);}');
    const fs=shader(gl.FRAGMENT_SHADER,`precision highp float;
 uniform sampler2D camera;uniform vec2 resolution;uniform vec2 crop;uniform float block;uniform float brightness;uniform float mirror;uniform float grain;uniform vec4 regions[6];uniform int regionCount;uniform float feather;uniform float mosaic;
 float hash(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
+vec2 cameraUV(vec2 uv){uv.x=mix(uv.x,1.-uv.x,mirror);return (uv-.5)*crop+.5;}
 void main(){
  vec2 screen=vec2(gl_FragCoord.x/resolution.x,1.-gl_FragCoord.y/resolution.y);
  float moving=0.;
