@@ -74,7 +74,7 @@ try{
 
  const blocked=await browser.newPage();await blocked.context().route('**/opencv.js',route=>route.abort());await blocked.goto('http://127.0.0.1:8765/relief/index.html');
  await blocked.waitForFunction(()=>document.querySelector('#status').textContent.includes('could not load'),{},{timeout:10000});
- assert(await blocked.locator('#feed').evaluate(v=>v.readyState>=2));
+ await blocked.waitForFunction(()=>document.querySelector('#feed').readyState>=2,{},{timeout:10000});
  await blocked.close();
 
  // Full app: unfamiliar moving texture produces notes through the real OpenCV worker.
