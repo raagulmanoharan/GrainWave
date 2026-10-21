@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {mergeMotionSources as merge} from '../motion-sources.js';
+const region=(id='motion-1',x=.1)=>({id,confirmed:true,x:x+.05,y:.25,dx:.005,dy:0,box:{x,y:.2,w:.1,h:.1}});
+const r=region(),person={...region('object-1'),label:'person'};
+assert.equal(merge([], [r]).length,1,'Unrecognized coherent movement works without model');
+assert.equal(merge([], [r])[0].label,'motion');
+assert.equal(merge([], [r],[],{uncertain:true}).length,0,'Camera uncertainty suppresses fallback');
+assert.equal(merge([], [{...r,confirmed:false}]).length,0,'Unconfirmed flow stays silent');
+assert.equal(merge([person],[r],[person]).length,1,'No duplicate node on recognized object');
+assert.equal(merge([],[r],[person]).length,0,'Recognition retains its movement gate');
+assert.equal(merge([person],[region('motion-2',.7)],[person]).length,2,'Known and unfamiliar objects coexist');
+assert.equal(merge([], [r,region('motion-2',.11)]).length,1,'Overlapping regions do not multiply nodes');
+assert.equal(merge([], [r,region('motion-2',.7)],[],{maximum:1}).length,1,'Shared note budget');
+assert.equal(merge([],[]).length,0,'No motion means no fallback');
+console.log('Coherent region merging, recognition ownership and camera gates passed');
