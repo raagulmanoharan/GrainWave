@@ -7,7 +7,7 @@ import {MotionArpeggio} from './motion-arpeggio.js';
 const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
 import {Onboarding} from './onboarding.js?v=quiet-art-1';
-import {GrainProcessor} from './grain-process.js?v=fresh-1';
+import {GrainProcessor} from './grain-process.js?v=clarity-1';
 import {AmbientBed} from './ambient.js?v=lofi-budget-1';
 let ambientBed=null;
 import {LandingType} from './landing-type.js?v=cells-1';
@@ -182,7 +182,7 @@ function drawTracked(w,h){
 
 const grainInput=document.createElement('canvas'),grainInputContext=grainInput.getContext('2d',{willReadFrequently:true}),grainFallback=new GrainProcessor();let grainWorker=null,grainBusy=false;
 function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainData&&grainCanvas.width===frame.width&&grainCanvas.height===frame.height){grainCrossfade.capture(grainCanvas,performance.now(),frame.generation)}else{grainCrossfade.reset();grainCrossfade.generation=frame.generation}if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
-try{grainWorker=new Worker('grain-worker.js?v=fresh-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
+try{grainWorker=new Worker('grain-worker.js?v=clarity-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
 function drawGrain(w,h,time){
  if(!grainBusy&&cameraFrames.take('grain',cameraGeneration)){
   const width=Math.max(1,Math.floor(Math.min(960,w*Math.min(devicePixelRatio,2),Math.sqrt(1200000*w/h)))),height=Math.max(1,Math.round(width*h/w));
