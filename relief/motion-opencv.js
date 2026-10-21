@@ -3,13 +3,15 @@
 (function(root){
 const median=a=>{a.sort((x,y)=>x-y);return a[Math.floor(a.length/2)]||0};
 class OpenCVMotion {
- constructor(cv){this.cv=cv;this.reset()}
+ constructor(cv){this.cv=cv;this.clahe=new cv.CLAHE(1.5,new cv.Size(8,8));this.reset()}
  reset(){this.previous?.delete();this.previous=null;this.features=[];this.objects=[];this.lastTime=null;this.serial=0;this.frames=0;this.width=0;this.height=0}
  update(data,w,h,time,maximum=10,sensitivity=.5){
   const cv=this.cv,owned=[],mat=(...args)=>{const m=new cv.Mat(...args);owned.push(m);return m};
   if(w!==this.width||h!==this.height||this.lastTime!==null&&time-this.lastTime>350){this.reset();this.width=w;this.height=h}
   const dt=this.lastTime===null?60:Math.max(1,time-this.lastTime);this.lastTime=time;
   const rgba=mat(h,w,cv.CV_8UC4),gray=mat();rgba.data.set(data);cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);
+  // Mild denoising before contrast-limited enhancement avoids boosting sensor noise.
+  const smooth=mat(),enhanced=mat();cv.GaussianBlur(gray,smooth,new cv.Size(3,3),.6,.6,cv.BORDER_DEFAULT);this.clahe.apply(smooth,enhanced);cv.addWeighted(smooth,.5,enhanced,.5,0,gray);
   const result={flow:[],sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
   try {
    let survivors=[];
