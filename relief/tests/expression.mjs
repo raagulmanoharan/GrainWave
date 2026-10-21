@@ -11,3 +11,13 @@ e.observe([p(415)],800);assert.equal(e.advance(800).note,false,'Old worker resul
 e.observe([p(900)],900);assert.equal(e.advance(900).note,true);
 assert.equal(e.advance(1200).note,false,'Stationary scene releases notes');e.reset();assert.equal(e.active.size,0);
 console.log('OpenCV expression, timing, camera uncertainty and release passed');
+
+const {MotionArpeggio,NOTE_GAP}=await import('../motion-arpeggio.js');
+const run=new MotionArpeggio(),gesture={time:0,midi:60,point:{x:.5,y:.5},level:1,sources:6};
+const notes=run.plan(gesture);
+assert.equal(notes.length,2,'Strong gestures add only two follow-up notes');
+assert(notes[0].at>=450);assert(notes[1].at-notes[0].at>=450);
+assert(run.busy(notes.at(-1).at+NOTE_GAP-1),'Leave space after a run');
+assert.deepEqual(run.plan({...gesture,time:1500}),[],'Avoid repeated bursts');
+assert(run.plan({...gesture,time:2500}).length>0,'Runs become available again');
+console.log('Spaced motion runs and recovery interval passed');

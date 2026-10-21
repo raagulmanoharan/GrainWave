@@ -6,7 +6,7 @@ import {CameraFrames,analysisSize} from './camera-frames.js?v=budget-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
 
-import {MotionArpeggio} from './motion-arpeggio.js';
+import {MotionArpeggio,NOTE_GAP} from './motion-arpeggio.js?v=spaced-1';
 const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
 import {Onboarding} from './onboarding.js?v=quiet-art-1';
@@ -142,7 +142,7 @@ function perform(time){
  for(const l of noteBuffer.loops){const b=document.querySelector(`[data-loop-id="${l.id}"]`);if(b){b.style.setProperty('--phase',`${(l.paused?l.phase:l.clock.progress(time))*100}%`);b.classList.toggle('paused',l.paused)}}
  const state=expression.advance(time,{release:+$('release').value/100});
  $('gesture-progress').style.width=`${Math.round(state.level*100)}%`;$('gesture-meter').setAttribute('aria-valuenow',Math.round(state.level*100));
- const generatedPitch=state.note&&liveRunning&&time-lastLiveTime>=120&&!motionArpeggio.busy(time)?song.trigger(state.point.y,time):null;
+ const generatedPitch=state.note&&liveRunning&&time-lastLiveTime>=NOTE_GAP&&!motionArpeggio.busy(time)?song.trigger(state.point.y,time):null;
  const phrasePitch=generatedPitch===null?null:complementaryPitch(generatedPitch,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);
  if(phrasePitch!==null&&noteBuffer.loops.length)lastLayerPitch=phrasePitch;const trigger=phrasePitch!==null;
  if(trigger){visualLoop.movement(true);if(!noteBuffer.loops.length)loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const note={midi:phrasePitch,velocity:state.level,point};noteBuffer.record({...note,time});syncLoopButton();currentPitch=note.midi;visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});lastLiveTime=time;noteFlash={point,until:time+180};}
@@ -165,7 +165,7 @@ function perform(time){
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
- while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});playTone({type:'tone',kind:'bell',role:'lead',velocity:event.velocity,monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2},liveEcho);visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});syncLoopButton()}
+ while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180||time-lastLiveTime<NOTE_GAP)continue;lastLiveTime=time;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});playTone({type:'tone',kind:'bell',role:'lead',velocity:event.velocity,monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2},liveEcho);visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});syncLoopButton()}
  for(const tone of noteEcho.due(audio.currentTime))instrument(master).port.postMessage(tone);
 }
 function syncPreview(){syncPerformanceControls();landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',noteBuffer.selection?!noteBuffer.selection.paused:liveRunning);$('play').classList.toggle('layer-ready',!noteBuffer.selection&&Boolean(noteBuffer.loops.length)&&!liveRunning);$('play').setAttribute('aria-label',noteBuffer.selection?(noteBuffer.selection.paused?'Play selected loop':'Pause selected loop'):liveRunning?'Pause live generation':noteBuffer.loops.length?'Layer live generation over loop':'Start the live instrument');$('play-label').textContent=noteBuffer.selection?(noteBuffer.selection.paused?'PLAY':'PAUSE'):liveRunning?'HOLD':'+ LIVE';$('live-state').textContent=playing?'PLAYING':'LIVE';updateLoopStatus()}
