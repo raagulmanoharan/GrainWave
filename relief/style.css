@@ -49,7 +49,7 @@ button:focus-visible{outline:2px solid #fff;outline-offset:6px}
 .line-three .pixel-letter{font-size:.89em}
 #open-settings,.flip-camera{background:#09090955}
 .camera-fallback{bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}.camera-fallback button{border-radius:999px;min-height:44px}
-body:has(#camera:not([hidden])) #status{top:calc(env(safe-area-inset-top,0px) + 82px);bottom:auto;right:24px}
+
 
 /* Oversized edition numeral sits behind the stepped red typography. */
 .poster-edition{position:fixed;inset:17% -3% auto -4%;z-index:-1;color:#fff;font:400 clamp(360px,110vw,760px)/1 ReliefPixel,monospace;letter-spacing:-.15em;white-space:nowrap;transform:scaleY(1.35);transform-origin:top left}
@@ -529,3 +529,6 @@ body[data-mode=camera] #performance-tools{display:none}
 body[data-onboarding=true] #performance-tools,body[data-settings=true] #performance-tools{visibility:hidden}
 #loop-tools{bottom:calc(var(--frame-bottom) + var(--grid-cell));max-height:calc(100% - var(--frame-top) - var(--frame-bottom) - var(--grid-cell)*3);overflow-y:auto}
 #loop-tools button{flex-shrink:0}
+
+/* Camera startup is centered within the viewfinder. */
+#status[data-centered]{top:calc((100% + var(--frame-top) - var(--frame-bottom))/2);bottom:auto;height:auto;min-height:var(--grid-cell);transform:translateY(-50%);z-index:10}
