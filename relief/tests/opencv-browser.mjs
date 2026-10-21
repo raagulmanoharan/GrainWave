@@ -117,6 +117,7 @@ try{
  assert(await page.locator('#feed').evaluate(v=>!v.style.filter.includes('invert')));
  await page.reload();assert(await page.locator('#original-look').isChecked());
  assert(await page.locator('#feed').evaluate(v=>!v.style.filter.includes('invert')));
+ await page.locator('#cloud').click();await page.waitForFunction(()=>document.body.dataset.mode==='playing');
  await page.locator('#open-settings').click();await page.locator('#original-look').uncheck();
  assert(await page.locator('#feed').evaluate(v=>v.style.filter.includes('invert(1)')));
  await page.locator('[data-close]').click();await page.locator('#cloud').click();
