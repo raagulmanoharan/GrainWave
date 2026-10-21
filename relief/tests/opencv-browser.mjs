@@ -24,8 +24,8 @@ try{
  console.log(JSON.stringify(results,null,2));
  for(const r of results){assert(r.expected?r.detected>=3:r.detected===0,r.name);assert.equal(r.offTarget,0,r.name+' unrelated nodes');}
 
- const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.reload();await page.locator('#cloud').click();await page.locator('#tour-next').click();
+ const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log('APP ERROR:',e.message)});
+ await page.reload();await page.locator('#cloud').click();console.log('Entry state',await page.evaluate(()=>({mode:document.body.dataset.mode,onboarding:document.body.dataset.onboarding,status:document.querySelector('#status').textContent})),errors);await page.locator('#tour-next').click();
  await page.waitForTimeout(7000);
  const ui=await page.evaluate(()=>({video:document.querySelector('#feed').readyState,nativeDisplay:getComputedStyle(document.querySelector('#feed')).display,playing:document.body.dataset.mode,tracking:document.querySelector('#tracking-state').textContent,status:document.querySelector('#status').textContent}));
  console.log({ui,errors});assert.equal(ui.nativeDisplay,'block');assert(ui.video>=2);assert.equal(ui.playing,'playing');assert(!ui.status.includes('could not load'));assert.deepEqual(errors,[]);
