@@ -9,32 +9,20 @@ const browser=await chromium.launch({headless:true,args:['--use-fake-ui-for-medi
 try{
  const page=await browser.newPage();await page.goto('http://127.0.0.1:8765/relief/index.html');
  const results=await page.evaluate(async()=>{
-  const {mergeMotionSources}=await import('./motion-sources.js?v=regions-1');
-  const worker=new Worker('./motion-worker.js?v=detection-2');
+  const worker=new Worker('./motion-worker.js?v=opencv-only-1');
   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Worker timed out')),45000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
   const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
   const w=160,h=120,results=[];
   function scene(frame,{pan=0,object=0,noise=0,brightness=0,contrast=1}={}){const data=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const xx=x-pan*frame;let lum=95+18*Math.sin(xx*.37)*Math.cos(y*.31)+12*Math.sin(xx*.73+y*.61);const ox=xx-35-object*frame;if(object&&ox>=0&&ox<20&&y>=42&&y<62)lum=145+24*Math.sin(ox*.65)*Math.cos(y*.6);lum=110+(lum-110)*contrast;lum+=brightness*Math.sin(frame*.7)+noise*Math.sin(x*13+y*7+frame*19);const i=(y*w+x)*4;data[i]=data[i+1]=data[i+2]=lum;data[i+3]=255;}return data;}
   for(const [name,options,expected] of [['static',{},false],['noise',{noise:2},false],['exposure',{brightness:15},false],['camera pan',{pan:1},false],['small object',{object:1},true],['slow object',{object:.5},true],['pan and object',{pan:1,object:1},true],['flat static',{contrast:.2,noise:1},false],['flat moving object',{contrast:.2,object:1},true]]){
    worker.postMessage({type:'reset'});let detected=0,offTarget=0,cost=0;
-   for(let f=0;f<24;f++){const data=scene(f,options),reply=next();worker.postMessage({type:'frame',data,width:w,height:h,time:f*83,maximum:10,sensitivity:.5,generation:1},[data.buffer]);const r=await reply;if(r.type!=='result')throw Error(JSON.stringify(r));const sources=mergeMotionSources([],r.sources,[],{uncertain:r.cameraUncertain});if(sources.length)detected++;cost+=r.processingMs;for(const p of sources)if(expected&&(p.y<.25||p.y>.65))offTarget++;}
+   for(let f=0;f<24;f++){const data=scene(f,options),reply=next();worker.postMessage({type:'frame',data,width:w,height:h,time:f*83,maximum:10,sensitivity:.5,generation:1},[data.buffer]);const r=await reply;if(r.type!=='result')throw Error(JSON.stringify(r));const sources=r.cameraUncertain?[]:r.sources;if(sources.length)detected++;cost+=r.processingMs;for(const p of sources)if(expected&&(p.y<.25||p.y>.65))offTarget++;}
    results.push({name,expected,detected,offTarget,averageMs:cost/24});
   }
   worker.terminate();return results;
  });
  console.log(JSON.stringify(results,null,2));
  for(const r of results){assert(r.expected?r.detected>=3:r.detected===0,r.name);assert.equal(r.offTarget,0,r.name+' unrelated nodes');}
-
- // Exercise the actual COCO-SSD model, not mocked predictions.
- const recognized=await page.evaluate(async()=>{
-  const worker=new Worker('./object-worker.js?v=detection-2');
-  const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Object worker timeout')),60000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
-  const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
-  const image=new Image();image.src='./tests/cat-fixture.jpg';await image.decode();
-  const canvas=document.createElement('canvas');canvas.width=320;canvas.height=Math.round(320*image.height/image.width);const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,canvas.width,canvas.height);
-  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data,reply=next();worker.postMessage({type:'frame',data,width:canvas.width,height:canvas.height,time:0,generation:1},[data.buffer]);const r=await reply;worker.terminate();return r;
- });
- console.log({recognition:recognized});assert.equal(recognized.type,'result');assert(recognized.predictions.some(p=>p.class==='cat'&&p.score>=.55),'Real model must recognize fixture');
 
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.reload();await page.locator('#cloud').click();await page.locator('#tour-next').click();
@@ -83,21 +71,38 @@ try{
  assert(await blocked.locator('#feed').evaluate(v=>v.readyState>=2));
  await blocked.close();
 
- // Full application: a stationary recognized cat must still get a visible label.
- const recognitionPage=await browser.newPage();
- await recognitionPage.addInitScript(()=>{
-  const original=CanvasRenderingContext2D.prototype.fillText;
-  CanvasRenderingContext2D.prototype.fillText=function(text,...args){if(this.canvas.id==='cloud'&&text==='cat')window.catLabelSeen=true;return original.call(this,text,...args)};
+ // Full app: unfamiliar moving texture produces notes through the real OpenCV worker.
+ await page.close();
+ const motionPage=await browser.newPage({viewport:{width:390,height:720}});
+ const requests=[];motionPage.on('request',r=>requests.push(r.url()));
+ await motionPage.addInitScript(()=>{
+  window.liveTones=0;window.moveFixture=false;window.workerURLs=[];
+  const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(url,...args){super(url,...args);window.workerURLs.push(String(url))}};
+  const send=MessagePort.prototype.postMessage;
+  MessagePort.prototype.postMessage=function(message,...args){if(message?.type==='tone'&&message.role==='lead')window.liveTones++;return send.call(this,message,...args)};
   navigator.mediaDevices.getUserMedia=async()=>{
-   const img=new Image();img.src='/relief/tests/cat-fixture.jpg';await img.decode();
-   const c=document.createElement('canvas');c.width=320;c.height=Math.round(320*img.height/img.width);const ctx=c.getContext('2d');
-   const draw=()=>{ctx.drawImage(img,0,0,c.width,c.height);requestAnimationFrame(draw)};draw();return c.captureStream(30);
+   const c=document.createElement('canvas');c.width=160;c.height=320;const ctx=c.getContext('2d');
+   const bg=document.createElement('canvas');bg.width=c.width;bg.height=c.height;const b=bg.getContext('2d'),data=b.createImageData(c.width,c.height);
+   for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4,v=95+18*Math.sin(x*.37)*Math.cos(y*.31)+12*Math.sin(x*.73+y*.61);data.data[i]=data.data[i+1]=data.data[i+2]=v;data.data[i+3]=255}b.putImageData(data,0,0);
+   const patch=document.createElement('canvas');patch.width=30;patch.height=40;const p=patch.getContext('2d'),pixels=p.createImageData(30,40);
+   for(let y=0;y<40;y++)for(let x=0;x<30;x++){const i=(y*30+x)*4,v=160+40*Math.sin(x*.65)*Math.cos(y*.6);pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;pixels.data[i+3]=255}p.putImageData(pixels,0,0);
+   let phase=0,last=0;const draw=time=>{if(window.moveFixture)phase+=Math.min(50,time-last)*.0006;last=time;ctx.drawImage(bg,0,0);ctx.drawImage(patch,65+Math.sin(phase)*35,140);requestAnimationFrame(draw)};requestAnimationFrame(draw);return c.captureStream(30);
   };
  });
- await recognitionPage.goto('http://127.0.0.1:8765/relief/index.html');
- await recognitionPage.locator('#cloud').click();await recognitionPage.locator('#tour-next').click();
- await recognitionPage.waitForFunction(()=>window.catLabelSeen===true,{},{timeout:60000});
- console.log('Full app shows recognition label for a stationary object');await recognitionPage.close();
+ await motionPage.goto('http://127.0.0.1:8765/relief/index.html');
+ await motionPage.locator('#cloud').click();await motionPage.locator('#tour-next').click();
+ await motionPage.waitForTimeout(4000);
+ assert.equal(await motionPage.evaluate(()=>window.liveTones),0,'Stationary scene must not play');
+ await motionPage.evaluate(()=>window.moveFixture=true);
+ await motionPage.waitForFunction(()=>window.liveTones>0,{},{timeout:20000});
+ assert(await motionPage.locator('#capture-loop').isEnabled(),'Movement records notes for KEEP');
+ await motionPage.evaluate(()=>window.moveFixture=false);
+ await motionPage.waitForTimeout(1800);const stopped=await motionPage.evaluate(()=>window.liveTones);
+ await motionPage.waitForTimeout(1000);assert.equal(await motionPage.evaluate(()=>window.liveTones),stopped,'Stopped movement releases live notes');
+ const workerURLs=await motionPage.evaluate(()=>window.workerURLs);
+ assert.equal(workerURLs.length,1);assert(workerURLs[0].includes('motion-worker.js'));
+ assert(!requests.some(url=>/tensorflow|tfjs|coco-ssd|object-worker|hand_landmarker|vision_bundle/.test(url)),'No old detection models requested');
+ console.log({openCVOnly:true,liveNotes:stopped,workerURLs});await motionPage.close();
 
  console.log('OpenCV worker, motion scenes, live app and runtime-failure checks passed');
 }finally{await browser.close();server.close()}

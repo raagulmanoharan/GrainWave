@@ -1,10 +1,6 @@
 import {PixelPreview} from './pixel-preview.js?v=pixels-1';
-import {mergeMotionSources} from './motion-sources.js?v=regions-1';
 import {previewFilter,PrintTexture} from './preview-tone.js?v=pixels-1';
 const printTexture=new PrintTexture();
-import {ObjectTracks} from './object-tracks.js?v=detection-2';
-const objectTracks=new ObjectTracks();
-let objectWorker=null,objectReady=false,objectBusy=false,objectLast=-Infinity,objectInterval=800,objectTimer=null,objectWatchdog=null,objectCutoff=-Infinity;
 import {CameraFrames} from './camera-frames.js?v=presented-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
@@ -18,7 +14,6 @@ import {AmbientBed} from './ambient.js?v=lofi-budget-1';
 let ambientBed=null;
 import {LandingType} from './landing-type.js?v=cells-1';
 const landingType=new LandingType();
-import {drawPosterPaths} from './poster-paths.js?v=fine-1';
 import {VisualDistortion} from './visual-distortion.js?v=drive-1';
 const visualDistortion=new VisualDistortion();
 import {VisualLoop} from './visual-loop.js?v=still-2';
@@ -36,29 +31,28 @@ import {LoopRack} from './note-buffer.js?v=rack-1';
 const noteBuffer=new LoopRack();
 let song=new MotifSong(Math.random,{generative:true});
 
-import {MotionExpression} from './expression.js?v=motion-evidence-1';
-import {pitch} from './music.js';
-import {PointTracker} from './tracking.js?v=motion-evidence-1';
+import {MotionExpression} from './expression.js?v=opencv-only-1';
+import {PointTracker} from './tracking.js?v=opencv-only-1';
 const expression=new MotionExpression(),motionEcho=new MotionEcho();
-let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
+let motionWorker=null,motionBusy=false,lastLiveTime=0;
 import {fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
 const cameraFrames=new CameraFrames(video);
 canvas.parentElement.insertBefore(video,canvas);video.hidden=false;video.setAttribute('aria-hidden','true');
 const pixelCanvas=document.createElement('canvas');pixelCanvas.id='pixel-preview';pixelCanvas.setAttribute('aria-hidden','true');pixelCanvas.hidden=true;canvas.parentElement.insertBefore(pixelCanvas,canvas);const pixelPreview=new PixelPreview(pixelCanvas);
-const grainCanvas=document.createElement('canvas'),grainContext=grainCanvas.getContext('2d',{willReadFrequently:true});let feedbackPixels=null,lastGrain=0,grainData=null,lastPercussion=-Infinity,percussionStep=0,songStep=0,nextSongTime=0;
+const echoCanvas=document.createElement('canvas'),echoContext=echoCanvas.getContext('2d',{willReadFrequently:true});let songStep=0,nextSongTime=0;
 
-let motionWidth=320,motionCost=0,motionSamples=0,motionReady=false,motionFailure='',lastMotionSample=-Infinity;
+const motionWidth=320;
+let motionReady=false,motionFailure='',lastMotionSample=-Infinity;
 let facing='environment',tracked=[],motionSources=[];const motionCanvas=document.createElement('canvas'),mc=motionCanvas.getContext('2d',{willReadFrequently:true});
 const motionTracker={cameraUncertain:false,reset(){this.cameraUncertain=false;lastMotionSample=-Infinity}},tracker=new PointTracker();
 let noteBudget=10,wet=null,reverbWet=null,delayFeedback=null,feedbackShaper=null;
-let stream=null,points=[],threshold=.5,mode='camera',cameraBusy=false,cameraGeneration=0,frame=0,audio,master,delay,timer,tick=0,nextTime=0,visibleTick=0,playing=false,liveRunning=false,audioStarting=false,pointer=null;
+let stream=null,threshold=.5,cameraBusy=false,cameraGeneration=0,frame=0,audio,master,delay,playing=false,liveRunning=false,audioStarting=false;
 let currentPitch=null;
-let visibleNotes=[];const scheduled=[],reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function status(text){$('status').textContent=text||motionFailure}
 function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=previewFilter(threshold);rebuildNotes()}
 function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
-function releaseCamera(){cameraFrames.reset();motionWidth=320;motionCost=0;motionSamples=0;clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();objectTracks.reset();objectCutoff=performance.now();objectLast=-Infinity;motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
+function releaseCamera(){cameraFrames.reset();clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();tracked=[];tracker.reset();expression.reset();motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 let cameraStartPending=null;
 async function startCamera(){if(cameraStartPending)return cameraStartPending;cameraStartPending=initializeCamera();try{await cameraStartPending}finally{cameraStartPending=null}}
 async function initializeCamera(){if(cameraBusy||stream)return;cameraBusy=true;const generation=++cameraGeneration;$('camera').disabled=true;status('Opening your camera…');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS and a supported browser');const incoming=await navigator.mediaDevices.getUserMedia({audio:false,video:{frameRate:{ideal:30,max:30},facingMode:{ideal:facing},width:{ideal:640},height:{ideal:840}}});if(generation!==cameraGeneration){incoming.getTracks().forEach(t=>t.stop());return}stream=incoming;video.srcObject=stream;await video.play();if(generation!==cameraGeneration)return;rebuildNotes();$('camera').hidden=true;status('')}catch(error){$('camera').hidden=false;status(error.name==='NotAllowedError'?'Enable camera access in your browser to play.':`Camera unavailable. ${error.message}.`)}finally{cameraBusy=false;$('camera').disabled=false}}
@@ -67,26 +61,26 @@ function trackingStatus(text){if($('tracking-state').textContent!==text)$('track
 function rebuildNotes(){$('play').disabled=!stream}
 function mergeTracking(time){
  const input=motionSources;
- expression.observe(input,0,time,{cameraOffset,uncertain:motionTracker.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100});
+ expression.observe(input,time,{uncertain:motionTracker.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100});
  tracked=tracker.update(input.filter(p=>(expression.active.get(p.id)||0)>time),time,$('scale').value,noteBudget).map(p=>({...p,midi:pulsePitch(p.y)}));
  rebuildNotes();
- trackingStatus(motionTracker.cameraUncertain?'Hold camera steady':expression.level>.05?'Let it bloom':!objectReady&&objectWorker?'Tracking movement · loading object recognition…':'Move gently to begin');
+ trackingStatus(motionTracker.cameraUncertain?'Hold camera steady':expression.level>.05?'Let it bloom':'Move gently to begin');
 }
 
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
-function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();motionFailure='Motion tracking could not load. Reload to retry.';status(motionFailure);return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}const now=performance.now(),objects=objectReady?objectTracks.update(d.flow||[],now,{uncertain:d.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100,maximum:noteBudget}):[];motionSources=mergeMotionSources(objects,d.sources||[],objectTracks.visible(now),{uncertain:d.cameraUncertain,maximum:noteBudget});motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=detection-2');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
+function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();motionFailure='Motion tracking could not load. Reload to retry.';status(motionFailure);return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}motionSources=d.cameraUncertain?[]:(d.sources||[]).slice(0,noteBudget);motionTracker.cameraUncertain=d.cameraUncertain;mergeTracking(performance.now())}
+function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=opencv-only-1');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
 function sampleVideo(){if(video.readyState<2)return;
- const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){objectTracks.reset();objectCutoff=time;clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
+ const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(echoCanvas.width!==motionCanvas.width||echoCanvas.height!==motionCanvas.height){echoCanvas.width=motionCanvas.width;echoCanvas.height=motionCanvas.height}echoContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;master?.instrument?.port.postMessage({type:'silence'})}
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}}
 
  }
 
 $('camera').onclick=startCamera;
-$('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';points=[];await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
-$('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
+$('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
+$('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
 
-function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo();sampleRecognition(time)}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){const pixelsReady=pixelPreview.draw(video,w,h,threshold,$('mirror-toggle').checked);pixelCanvas.hidden=!pixelsReady;video.style.visibility=pixelsReady?'hidden':'visible';if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}if(!pixelsReady)printTexture.draw(ctx,w,h)}else{pixelCanvas.hidden=true;video.style.visibility='visible';ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
+function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){const pixelsReady=pixelPreview.draw(video,w,h,threshold,$('mirror-toggle').checked);pixelCanvas.hidden=!pixelsReady;video.style.visibility=pixelsReady?'hidden':'visible';if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}if(!pixelsReady)printTexture.draw(ctx,w,h)}else{pixelCanvas.hidden=true;video.style.visibility='visible';ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){
@@ -110,7 +104,7 @@ function perform(time){
  const generatedPitch=state.note&&liveRunning&&time-lastLiveTime>=120&&!motionArpeggio.busy(time)?song.trigger(state.point.y,time):null;
  const phrasePitch=generatedPitch===null?null:complementaryPitch(generatedPitch,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);
  if(phrasePitch!==null&&noteBuffer.loops.length)lastLayerPitch=phrasePitch;const trigger=phrasePitch!==null;
- if(trigger){visualLoop.movement(time,true);if(!noteBuffer.loops.length)loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const candidate={midi:phrasePitch,velocity:state.level,point};const note=candidate;noteBuffer.record({...note,time});syncLoopButton();currentPitch=note.midi;visibleNotes=[note,null,null];visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});visibleTick++;lastLiveTime=time;noteFlash={point,until:time+180};}
+ if(trigger){visualLoop.movement(time,true);if(!noteBuffer.loops.length)loopHighlights=[];const point={...state.point,gestureDirection:state.direction,gestureTravel:state.level};const note={midi:phrasePitch,velocity:state.level,point};noteBuffer.record({...note,time});syncLoopButton();currentPitch=note.midi;visualLoop.remember({...point,sourceId:point.id,id:`${point.id}:${note.midi}`,midi:note.midi});lastLiveTime=time;noteFlash={point,until:time+180};}
  if(audio.currentTime-nextSongTime>.2)nextSongTime=audio.currentTime;
  visualLoop.looping=Boolean(noteBuffer.loops.length);
  const interval=60/+$('pulse').value/4;
@@ -126,15 +120,15 @@ function perform(time){
   loopHighlights.push({point:event.point,loopId:event.loopId,start:event.at,end:event.at+180});
  }
 
- if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);lastPercussion=time;if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(grainCanvas,state.point,time,+$('pulse').value,threshold);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
+ if(trigger){pendingArpeggio.push(...motionArpeggio.plan({time,midi:currentPitch,point:state.point,level:state.level,sources:[...expression.active.values()].filter(until=>until>time).length}));const drift=leadModulation(audio.currentTime);if(+$('echo').value>0||+$('distortion').value>0)motionEcho.capture(echoCanvas,state.point,time,+$('pulse').value,threshold);instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,effectSend:0,freq:440*2**((currentPitch-69)/12),level:.12+state.level*.055+song.build*.02,duration:(1.2+Math.random()*1.6)*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(state.point.x-.5)*1.2});
   if(time-lastAccent>2200&&Math.random()<.08&&state.point.box){accent={id:state.point.id,until:time+160};lastAccent=time}
  }
  if(!liveRunning){pendingArpeggio=[];motionArpeggio.reset()}
- while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2});visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});visibleNotes=[event,null,null];syncLoopButton()}
+ while(liveRunning&&pendingArpeggio.length&&pendingArpeggio[0].at<=time){const event=pendingArpeggio.shift();if(time-event.at>180)continue;noteFlash={point:event.point,until:time+180};const drift=leadModulation(audio.currentTime);event.midi=complementaryPitch(event.midi,noteBuffer.harmony(time),time,time,1e9,lastLayerPitch);lastLayerPitch=event.midi;currentPitch=event.midi;noteBuffer.record({...event,time:event.at});instrument(master).port.postMessage({type:'tone',kind:'bell',role:'lead',monophonic:true,freq:440*2**((event.midi-69)/12),level:(.12+event.velocity*.055)*.85,duration:1.4*drift.release,noise:.025+ +$('breath').value/2400+drift.noise,pan:(event.point.x-.5)*1.2});visualLoop.remember({...event.point,sourceId:event.point.id,id:`arp:${event.at}`,midi:event.midi});syncLoopButton()}
 }
 function syncPreview(){landingType.setPlaying(playing);document.body.dataset.mode=playing?'playing':'camera';$('play').classList.toggle('playing',noteBuffer.selection?!noteBuffer.selection.paused:liveRunning);$('play').classList.toggle('layer-ready',!noteBuffer.selection&&Boolean(noteBuffer.loops.length)&&!liveRunning);$('play').setAttribute('aria-label',noteBuffer.selection?(noteBuffer.selection.paused?'Play selected loop':'Pause selected loop'):liveRunning?'Pause live generation':noteBuffer.loops.length?'Layer live generation over loop':'Start the live instrument');$('play-label').textContent=noteBuffer.selection?(noteBuffer.selection.paused?'PLAY':'PAUSE'):liveRunning?'HOLD':'+ LIVE';$('live-state').textContent=playing?'PLAYING':'LIVE';updateLoopStatus()}
 function updateLoopStatus(){const text=playing?loopStatus({loops:noteBuffer.loops,selection:noteBuffer.selection,live:liveRunning,noteCount:noteBuffer.notes.length,saved:performance.now()<capturedNoticeUntil,beat:Math.floor(performance.now()/10000)}):'';const hint=playing&&liveRunning&&!noteBuffer.loops.length&&noteBuffer.notes.length<8?(noteBuffer.notes.length?'Higher in view = higher notes.\nMove faster for a little run.':'Hold the camera steady.\nWave a hand in view to play.'):text;if($('loop-flow').textContent!==hint)$('loop-flow').textContent=hint}
-function stop(){pendingArpeggio=[];motionArpeggio.reset();noteBuffer.locked=null;syncLoopButton();ambientBed?.stop();visualLoop.reset(performance.now());loopHighlights=[];accent=null;motionEcho.reset();playing=false;liveRunning=false;song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=0;lastPercussion=-Infinity;percussionStep=0;expression.reset();currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
+function stop(){pendingArpeggio=[];motionArpeggio.reset();noteBuffer.locked=null;syncLoopButton();ambientBed?.stop();visualLoop.reset(performance.now());loopHighlights=[];accent=null;motionEcho.reset();playing=false;liveRunning=false;song=new MotifSong(Math.random,{generative:true});songStep=0;nextSongTime=0;expression.reset();currentPitch=null;master?.instrument?.port.postMessage({type:'silence'});master?.gain.setTargetAtTime(0,audio.currentTime,.08);syncPreview();$('note-readout').textContent='';$('gesture-progress').style.width='0%'}
 function syncLoopButton(){const b=$('capture-loop');b.disabled=!noteBuffer.notes.length||noteBuffer.loops.length>=4;b.setAttribute('aria-pressed',String(Boolean(noteBuffer.loops.length)));b.setAttribute('aria-label',noteBuffer.loops.length>=4?'Four loops captured':'Save your recent notes as a loop');b.querySelector('.capture-label').textContent=noteBuffer.loops.length>=4?'FULL':'KEEP';syncLoopRack();updateLoopStatus()}
 let rackViewKey=null;
 function syncLoopRack(){
@@ -167,18 +161,10 @@ document.addEventListener('keydown',e=>{if(settingsPanel.open&&e.key==='Escape')
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
 $('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
 setBudget(10);
-initMotion();initObjects();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
+initMotion();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
 let noteFlash=null;
 function drawTracked(w,h){
- // Recognition is visible independently of the music's movement gate.
- ctx.save();ctx.lineWidth=1;ctx.font='12px Helvetica, Arial, sans-serif';
- for(const object of objectTracks.visible(performance.now())){
-  const b=object.box,x=b.x*w,y=b.y*h;
-  ctx.strokeStyle='rgba(255,255,255,.7)';ctx.setLineDash([4,4]);ctx.strokeRect(x,y,b.w*w,b.h*h);
-  const label=object.label;ctx.setLineDash([]);ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(x,Math.max(0,y-20),ctx.measureText(label).width+12,18);ctx.fillStyle='#fff';ctx.fillText(label,x+6,Math.max(13,y-7));
- }
- ctx.restore();
  const now=performance.now();loopHighlights=loopHighlights.filter(p=>p.end>now);const sources=liveRunning?tracked.filter(p=>(expression.active.get(p.id)||0)>now).slice(0,6).map(p=>({...p,midi:[...visualLoop.points.values()].reverse().find(n=>n.sourceId===p.id)?.midi??p.midi})):[];
  ctx.save();if(noteFlash&&liveRunning&&noteFlash.until>now){const x=noteFlash.point.x*w,y=noteFlash.point.y*h;ctx.fillStyle='#fff';ctx.globalAlpha=(noteFlash.until-now)/180;ctx.fillRect(x-4,y-4,8,8);ctx.globalAlpha=1}for(const event of loopHighlights){if(event.start<=now){ctx.fillStyle=loopColors[(event.loopId-1)%loopColors.length];ctx.fillRect(Math.round(event.point.x*w),Math.round(event.point.y*h),2,2)}}ctx.lineWidth=1;ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.setLineDash([]);ctx.font='10px Helvetica, Arial, sans-serif';
  const anchor=sources.find(p=>(p.sourceId||p.id)===expression.point.id)||sources[0];
@@ -219,35 +205,3 @@ applyTheme(theme);$('light-mode').onchange=()=>applyTheme($('light-mode').checke
 document.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;const kind=button.id==='capture-loop'?'keep':button.id==='tour-next'?'next':button.matches('[data-close],#tour-close')?'close':'tap';try{if(!uiSounds)await setupAudio();else if(audio.state==='suspended')await audio.resume();uiSounds?.play(kind)}catch{} },{capture:true});
 document.addEventListener('change',e=>{if(e.target.matches('input[type=checkbox],select'))uiSounds?.play('tap')});
 
-function objectFailure(){objectReady=false;objectBusy=false;clearTimeout(objectTimer);clearTimeout(objectWatchdog);objectWorker?.terminate();objectWorker=null;objectTracks.reset();motionSources=[];tracked=[];expression.reset();motionFailure='Object recognition could not load. Moving regions still work.';status(motionFailure)}
-function initObjects(){
- try{
-  objectWorker=new Worker('object-worker.js?v=detection-2');
-  objectTimer=setTimeout(objectFailure,60000);
-  objectWorker.onmessage=({data:d})=>{
-   if(d.type==='ready'){clearTimeout(objectTimer);objectReady=true;return}
-   if(d.type==='unavailable'){objectFailure();return}
-   objectBusy=false;clearTimeout(objectWatchdog);
-   if(d.generation!==cameraGeneration)return;
-   if(d.type!=='result'){objectFailure();return}
-   objectInterval=Math.max(800,Math.min(2000,d.processingMs*3));
-   if(d.time>=objectCutoff)objectTracks.detect(d.predictions,d.time,performance.now());
-  };
-  objectWorker.onerror=objectFailure;
- }catch{objectFailure()}
-}
-function sampleObjects(data,width,height,time){
- if(!objectReady||objectBusy||!liveRunning||document.hidden||time-objectLast<objectInterval)return;
- objectBusy=true;objectLast=time;const copy=data.slice();
- objectWatchdog=setTimeout(objectFailure,10000);
- objectWorker.postMessage({type:'frame',data:copy,width,height,time,generation:cameraGeneration},[copy.buffer]);
-}
-
-const recognitionCanvas=document.createElement('canvas'),recognitionContext=recognitionCanvas.getContext('2d',{willReadFrequently:true});
-function sampleRecognition(time){
- if(!objectReady||objectBusy||!liveRunning||document.hidden||video.readyState<2||time-objectLast<objectInterval)return;
- const width=320,height=Math.max(1,Math.round(width*canvas.clientHeight/canvas.clientWidth));
- if(recognitionCanvas.width!==width||recognitionCanvas.height!==height){recognitionCanvas.width=width;recognitionCanvas.height=height}
- drawCamera(recognitionContext,width,height);
- sampleObjects(recognitionContext.getImageData(0,0,width,height).data,width,height,time);
-}

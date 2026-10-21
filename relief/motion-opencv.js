@@ -12,7 +12,7 @@ class OpenCVMotion {
   const rgba=mat(h,w,cv.CV_8UC4),gray=mat();rgba.data.set(data);cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);
   // Preserve grain: contrast enhancement only, with no blur or denoising.
   const enhanced=mat();this.clahe.apply(gray,enhanced);cv.addWeighted(gray,.5,enhanced,.5,0,gray);
-  const result={flow:[],sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
+  const result={sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
   try {
    let survivors=[];
    if(this.previous&&this.features.length>=4){
@@ -49,7 +49,7 @@ class OpenCVMotion {
       p.hits=consistent?p.hits+1:1;p.evidence=time;p.lastRx=p.rx;p.lastRy=p.ry;
       if(p.hits>=3)moving.push(p);
      }else if(result.cameraUncertain||time-(p.evidence||0)>180)p.hits=0;
-     result.flow.push({x:p.oldX/w,y:p.oldY/h,dx:p.dx/w,dy:p.dy/h,rx:p.rx/w,ry:p.ry/h});survivors.push(p);
+     survivors.push(p);
     }
     const groups=[];
     for(const p of moving){const g=groups.find(g=>g.some(q=>Math.hypot(p.x-q.x,p.y-q.y)<Math.max(12,w*.07)&&Math.hypot(p.rx-q.rx,p.ry-q.ry)<1.5));if(g)g.push(p);else groups.push([p])}

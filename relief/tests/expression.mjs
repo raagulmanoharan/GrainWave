@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {MotionExpression} from '../expression.js';
+const e=new MotionExpression();
+const p=(time,dx=.005)=>({id:'motion-1',confirmed:true,x:.5,y:.5,dx,dy:0,time,interval:83});
+e.observe([p(83,.00001)],83);assert.equal(e.advance(83).note,false,'Residual jitter is silent');
+e.observe([p(166)],166);assert.equal(e.advance(166).note,true,'Confirmed OpenCV travel triggers');
+e.observe([p(166)],170);assert.equal(e.advance(170).note,false,'Same frame cannot retrigger');
+e.observe([p(249)],249,{uncertain:true});assert.equal(e.advance(249).note,false,'Uncertain camera stops notes');
+e.observe([{...p(332),confirmed:false}],332);assert.equal(e.advance(332).note,false,'Unconfirmed points ignored');
+e.observe([p(415)],800);assert.equal(e.advance(800).note,false,'Old worker result ignored');
+e.observe([p(900)],900);assert.equal(e.advance(900).note,true);
+assert.equal(e.advance(1200).note,false,'Stationary scene releases notes');e.reset();assert.equal(e.active.size,0);
+console.log('OpenCV expression, timing, camera uncertainty and release passed');

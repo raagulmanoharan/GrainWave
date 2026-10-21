@@ -1,3 +1,1 @@
-const bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
-export function sampleDither(data,width,height,threshold){const points=[];for(let y=0;y<height;y++)for(let x=0;x<width;x++){const k=(y*width+x)*4,l=(data[k]*.2126+data[k+1]*.7152+data[k+2]*.0722)/255,ordered=(bayer[(y%4)*4+x%4]+.5)/16;if(l+(ordered-.5)*.42<threshold)continue;points.push({x:(x+.5)/width,y:(y+.5)/height,z:l,energy:l,color:[data[k],data[k+1],data[k+2]]})}return points}
 export function fitCover(sourceWidth,sourceHeight,targetWidth,targetHeight){const scale=Math.max(targetWidth/sourceWidth,targetHeight/sourceHeight),w=targetWidth/scale,h=targetHeight/scale;return {x:(sourceWidth-w)/2,y:(sourceHeight-h)/2,width:w,height:h}}
