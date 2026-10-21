@@ -1,7 +1,7 @@
 name: OpenCV browser checks
 on:
   push:
-    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic, loop-echo]
+    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic, loop-echo, expressive-tones]
     paths: ['relief/**', '.github/workflows/opencv-check.yml']
   workflow_dispatch:
 permissions:
@@ -20,4 +20,5 @@ jobs:
       - run: for file in relief/*.js; do node --check "$file" || exit 1; done
       - run: node relief/tests/expression.mjs
       - run: node relief/tests/note-echo.mjs
+      - run: node relief/tests/tone-expression.mjs
       - run: node relief/tests/opencv-browser.mjs
