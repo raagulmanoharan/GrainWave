@@ -10,8 +10,8 @@ class OpenCVMotion {
   if(w!==this.width||h!==this.height||this.lastTime!==null&&time-this.lastTime>350){this.reset();this.width=w;this.height=h}
   const dt=this.lastTime===null?60:Math.max(1,time-this.lastTime);this.lastTime=time;
   const rgba=mat(h,w,cv.CV_8UC4),gray=mat();rgba.data.set(data);cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);
-  // Mild denoising before contrast-limited enhancement avoids boosting sensor noise.
-  const smooth=mat(),enhanced=mat();cv.GaussianBlur(gray,smooth,new cv.Size(3,3),.6,.6,cv.BORDER_DEFAULT);this.clahe.apply(smooth,enhanced);cv.addWeighted(smooth,.5,enhanced,.5,0,gray);
+  // Preserve grain: contrast enhancement only, with no blur or denoising.
+  const enhanced=mat();this.clahe.apply(gray,enhanced);cv.addWeighted(gray,.5,enhanced,.5,0,gray);
   const result={flow:[],sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
   try {
    let survivors=[];

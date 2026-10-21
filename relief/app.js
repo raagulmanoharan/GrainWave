@@ -1,4 +1,4 @@
-import {ObjectTracks} from './object-tracks.js?v=objects-1';
+import {ObjectTracks} from './object-tracks.js?v=detection-2';
 const objectTracks=new ObjectTracks();
 let objectWorker=null,objectReady=false,objectBusy=false,objectLast=-Infinity,objectInterval=800,objectTimer=null,objectWatchdog=null,objectCutoff=-Infinity;
 import {CameraFrames} from './camera-frames.js?v=presented-1';
@@ -65,14 +65,14 @@ function mergeTracking(time){
  expression.observe(input,0,time,{cameraOffset,uncertain:motionTracker.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100});
  tracked=tracker.update(input.filter(p=>(expression.active.get(p.id)||0)>time),time,$('scale').value,noteBudget).map(p=>({...p,midi:pulsePitch(p.y)}));
  rebuildNotes();
- trackingStatus(motionTracker.cameraUncertain?'Hold camera steady':expression.level>.05?'Let it bloom':'Move gently to begin');
+ trackingStatus(!objectReady?'Loading object recognition…':!objectTracks.visible(time).length?'Looking for people, vehicles and animals…':motionTracker.cameraUncertain?'Hold camera steady':expression.level>.05?'Let it bloom':'Move gently to begin');
 }
 
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
 function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();motionFailure='Motion tracking could not load. Reload to retry.';status(motionFailure);return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=objectReady?objectTracks.update(d.flow||[],performance.now(),{uncertain:d.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100,maximum:noteBudget}):[];motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=contrast-1');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
+function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=detection-2');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
 function sampleVideo(){if(video.readyState<2)return;
- const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;sampleObjects(data,motionCanvas.width,motionCanvas.height,time);visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){objectTracks.reset();objectCutoff=time;clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
+ const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){objectTracks.reset();objectCutoff=time;clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}}
 
  }
@@ -81,7 +81,7 @@ $('camera').onclick=startCamera;
 $('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';points=[];await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
 $('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
 
-function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
+function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo();sampleRecognition(time)}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){
@@ -166,6 +166,14 @@ initMotion();initObjects();document.body.dataset.input='live';updateThreshold(.6
 
 let noteFlash=null;
 function drawTracked(w,h){
+ // Recognition is visible independently of the music's movement gate.
+ ctx.save();ctx.lineWidth=1;ctx.font='12px Helvetica, Arial, sans-serif';
+ for(const object of objectTracks.visible(performance.now())){
+  const b=object.box,x=b.x*w,y=b.y*h;
+  ctx.strokeStyle='rgba(255,255,255,.7)';ctx.setLineDash([4,4]);ctx.strokeRect(x,y,b.w*w,b.h*h);
+  const label=object.label;ctx.setLineDash([]);ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(x,Math.max(0,y-20),ctx.measureText(label).width+12,18);ctx.fillStyle='#fff';ctx.fillText(label,x+6,Math.max(13,y-7));
+ }
+ ctx.restore();
  const now=performance.now();loopHighlights=loopHighlights.filter(p=>p.end>now);const sources=liveRunning?tracked.filter(p=>(expression.active.get(p.id)||0)>now).slice(0,6).map(p=>({...p,midi:[...visualLoop.points.values()].reverse().find(n=>n.sourceId===p.id)?.midi??p.midi})):[];
  ctx.save();if(noteFlash&&liveRunning&&noteFlash.until>now){const x=noteFlash.point.x*w,y=noteFlash.point.y*h;ctx.fillStyle='#fff';ctx.globalAlpha=(noteFlash.until-now)/180;ctx.fillRect(x-4,y-4,8,8);ctx.globalAlpha=1}for(const event of loopHighlights){if(event.start<=now){ctx.fillStyle=loopColors[(event.loopId-1)%loopColors.length];ctx.fillRect(Math.round(event.point.x*w),Math.round(event.point.y*h),2,2)}}ctx.lineWidth=1;ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.setLineDash([]);ctx.font='10px Helvetica, Arial, sans-serif';
  const anchor=sources.find(p=>(p.sourceId||p.id)===expression.point.id)||sources[0];
@@ -209,7 +217,7 @@ document.addEventListener('change',e=>{if(e.target.matches('input[type=checkbox]
 function objectFailure(){objectReady=false;objectBusy=false;clearTimeout(objectTimer);clearTimeout(objectWatchdog);objectWorker?.terminate();objectWorker=null;objectTracks.reset();motionSources=[];tracked=[];expression.reset();motionFailure='Object recognition could not load. Reload to retry.';status(motionFailure)}
 function initObjects(){
  try{
-  objectWorker=new Worker('object-worker.js?v=objects-1');
+  objectWorker=new Worker('object-worker.js?v=detection-2');
   objectTimer=setTimeout(objectFailure,60000);
   objectWorker.onmessage=({data:d})=>{
    if(d.type==='ready'){clearTimeout(objectTimer);objectReady=true;return}
@@ -228,4 +236,13 @@ function sampleObjects(data,width,height,time){
  objectBusy=true;objectLast=time;const copy=data.slice();
  objectWatchdog=setTimeout(objectFailure,10000);
  objectWorker.postMessage({type:'frame',data:copy,width,height,time,generation:cameraGeneration},[copy.buffer]);
+}
+
+const recognitionCanvas=document.createElement('canvas'),recognitionContext=recognitionCanvas.getContext('2d',{willReadFrequently:true});
+function sampleRecognition(time){
+ if(!objectReady||objectBusy||!liveRunning||document.hidden||video.readyState<2||time-objectLast<objectInterval)return;
+ const width=320,height=Math.max(1,Math.round(width*canvas.clientHeight/canvas.clientWidth));
+ if(recognitionCanvas.width!==width||recognitionCanvas.height!==height){recognitionCanvas.width=width;recognitionCanvas.height=height}
+ drawCamera(recognitionContext,width,height);
+ sampleObjects(recognitionContext.getImageData(0,0,width,height).data,width,height,time);
 }

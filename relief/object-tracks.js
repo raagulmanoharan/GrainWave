@@ -6,7 +6,7 @@ export class ObjectTracks{
  constructor(){this.reset()}
  reset(){this.tracks=[];this.serial=0;this.lastTime=null}
  detect(predictions,time,now=time){
-  if(now-time>2000)return;
+  if(now-time>5000)return;
   const candidates=[];
   for(const p of [...predictions].sort((a,b)=>b.score-a.score)){
    const b=p.box;if(!allowed.has(p.class)||p.score<.55||!b||![b.x,b.y,b.w,b.h].every(Number.isFinite)||b.w<=0||b.h<=0)continue;
@@ -16,11 +16,12 @@ export class ObjectTracks{
   const used=new Set();
   for(const p of candidates.slice(0,12)){
    const old=this.tracks.filter(t=>!used.has(t.id)&&t.label===p.class).map(t=>({t,score:Math.max(overlap(t.box,p.box),overlap(t.detectedBox,p.box))})).sort((a,b)=>b.score-a.score)[0];
-   if(old&&old.score>.2){const t=old.t;used.add(t.id);t.seen=time;t.detectedBox={...p.box};/* Flow is current; detector boxes describe an older frame. */if(now-time<250)for(const k of ['x','y','w','h'])t.box[k]=t.box[k]*.7+p.box[k]*.3;else{t.box.w=p.box.w;t.box.h=p.box.h}}
-   else{const t={id:`object-${++this.serial}`,label:p.class,box:{...p.box},detectedBox:{...p.box},seen:time,hits:0};this.tracks.push(t);used.add(t.id)}
+   if(old&&old.score>.2){const t=old.t;used.add(t.id);t.seen=now;t.detectedBox={...p.box};/* Flow is current; detector boxes describe an older frame. */if(now-time<250)for(const k of ['x','y','w','h'])t.box[k]=t.box[k]*.7+p.box[k]*.3;else{t.box.w=p.box.w;t.box.h=p.box.h}}
+   else{const t={id:`object-${++this.serial}`,label:p.class,box:{...p.box},detectedBox:{...p.box},seen:now,hits:0};this.tracks.push(t);used.add(t.id)}
   }
   this.tracks=this.tracks.filter(t=>now-t.seen<2500);
  }
+ visible(time){return this.tracks.filter(t=>time-t.seen<2500)}
  update(flow,time,{uncertain=false,sensitivity=.5,maximum=10}={}){
   const dt=this.lastTime===null?83:Math.max(1,time-this.lastTime);this.lastTime=time;
   this.tracks=this.tracks.filter(t=>time-t.seen<2500);

@@ -13,6 +13,8 @@ t=new ObjectTracks();t.detect([prediction(),prediction()],0);assert.equal(t.trac
 t=new ObjectTracks();t.detect([prediction('chair'),{...prediction(),score:.2}],0);assert.equal(t.tracks.length,0,'Class and confidence gates');
 t=new ObjectTracks();t.detect([prediction(),prediction('truck',.65)],0);assert.equal(advance(t,[...flow(),...flow(.004,.69)]).length,2,'One node for each moving object');
 assert.equal(t.update(flow(),3000).length,0,'Expired recognition cannot trigger');
-t.detect([prediction()],0,3000);assert.equal(t.tracks.length,0,'Late detection discarded');
+t.detect([prediction()],0,6000);assert.equal(t.tracks.length,0,'Late detection discarded');
 t.reset();assert.equal(advance(t,flow()).length,0,'Scene reset clears identities');
 console.log('Object identity, motion and expiry checks passed');
+
+t=new ObjectTracks();t.detect([prediction()],0,3000);assert.equal(t.visible(3000).length,1,'Slow mobile result is visible on arrival');assert.equal(advance(t,flow(0),3000).length,0,'Visible stationary object remains silent');assert.equal(t.visible(6000).length,0,'Visibility expires');

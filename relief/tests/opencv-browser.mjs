@@ -9,7 +9,7 @@ const browser=await chromium.launch({headless:true,args:['--use-fake-ui-for-medi
 try{
  const page=await browser.newPage();await page.goto('http://127.0.0.1:8765/relief/index.html');
  const results=await page.evaluate(async()=>{
-  const worker=new Worker('./motion-worker.js?v=contrast-1');
+  const worker=new Worker('./motion-worker.js?v=detection-2');
   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Worker timed out')),45000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
   const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
   const w=160,h=120,results=[];
@@ -26,7 +26,7 @@ try{
 
  // Exercise the actual COCO-SSD model, not mocked predictions.
  const recognized=await page.evaluate(async()=>{
-  const worker=new Worker('./object-worker.js?v=objects-1');
+  const worker=new Worker('./object-worker.js?v=detection-2');
   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Object worker timeout')),60000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
   const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
   const image=new Image();image.src='./tests/cat-fixture.jpg';await image.decode();
@@ -46,5 +46,22 @@ try{
  await blocked.waitForFunction(()=>document.querySelector('#status').textContent.includes('could not load'),{},{timeout:10000});
  assert(await blocked.locator('#feed').evaluate(v=>v.readyState>=2));
  await blocked.close();
+
+ // Full application: a stationary recognized cat must still get a visible label.
+ const recognitionPage=await browser.newPage();
+ await recognitionPage.addInitScript(()=>{
+  const original=CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText=function(text,...args){if(this.canvas.id==='cloud'&&text==='cat')window.catLabelSeen=true;return original.call(this,text,...args)};
+  navigator.mediaDevices.getUserMedia=async()=>{
+   const img=new Image();img.src='/relief/tests/cat-fixture.jpg';await img.decode();
+   const c=document.createElement('canvas');c.width=320;c.height=Math.round(320*img.height/img.width);const ctx=c.getContext('2d');
+   const draw=()=>{ctx.drawImage(img,0,0,c.width,c.height);requestAnimationFrame(draw)};draw();return c.captureStream(30);
+  };
+ });
+ await recognitionPage.goto('http://127.0.0.1:8765/relief/index.html');
+ await recognitionPage.locator('#cloud').click();await recognitionPage.locator('#tour-next').click();
+ await recognitionPage.waitForFunction(()=>window.catLabelSeen===true,{},{timeout:60000});
+ console.log('Full app shows recognition label for a stationary object');await recognitionPage.close();
+
  console.log('OpenCV worker, motion scenes, live app and runtime-failure checks passed');
 }finally{await browser.close();server.close()}

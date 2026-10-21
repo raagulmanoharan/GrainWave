@@ -13,7 +13,7 @@ self.onmessage=({data:d})=>{
  catch(e){tracker.reset();self.postMessage({type:'error',generation:d.generation,message:String(e)})}
 };
 try{
- importScripts('./motion-opencv.js?v=contrast-1');
+ importScripts('./motion-opencv.js?v=detection-2');
  self.Module={onRuntimeInitialized(){ready(self.cv)}};
  importScripts('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js');
  if(self.cv?.Mat)ready(self.cv);
