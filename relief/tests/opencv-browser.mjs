@@ -9,7 +9,7 @@ const browser=await chromium.launch({headless:true,args:['--use-fake-ui-for-medi
 try{
  const page=await browser.newPage();await page.goto('http://127.0.0.1:8765/relief/index.html');
  const results=await page.evaluate(async()=>{
-  const worker=new Worker('./motion-worker.js?v=opencv-1');
+  const worker=new Worker('./motion-worker.js?v=objects-1');
   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Worker timed out')),45000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
   const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
   const w=160,h=120,results=[];
@@ -23,6 +23,18 @@ try{
  });
  console.log(JSON.stringify(results,null,2));
  for(const r of results){assert(r.expected?r.detected>=3:r.detected===0,r.name);assert.equal(r.offTarget,0,r.name+' unrelated nodes');}
+
+ // Exercise the actual COCO-SSD model, not mocked predictions.
+ const recognized=await page.evaluate(async()=>{
+  const worker=new Worker('./object-worker.js?v=objects-1');
+  const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Object worker timeout')),60000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
+  const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
+  const image=new Image();image.src='./tests/cat-fixture.jpg';await image.decode();
+  const canvas=document.createElement('canvas');canvas.width=320;canvas.height=Math.round(320*image.height/image.width);const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,canvas.width,canvas.height);
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data,reply=next();worker.postMessage({type:'frame',data,width:canvas.width,height:canvas.height,time:0,generation:1},[data.buffer]);const r=await reply;worker.terminate();return r;
+ });
+ console.log({recognition:recognized});assert.equal(recognized.type,'result');assert(recognized.predictions.some(p=>p.class==='cat'&&p.score>=.55),'Real model must recognize fixture');
+
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.reload();await page.locator('#cloud').click();await page.locator('#tour-next').click();
  await page.waitForTimeout(7000);

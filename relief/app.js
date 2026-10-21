@@ -1,3 +1,6 @@
+import {ObjectTracks} from './object-tracks.js?v=objects-1';
+const objectTracks=new ObjectTracks();
+let objectWorker=null,objectReady=false,objectBusy=false,objectLast=-Infinity,objectInterval=800,objectTimer=null,objectWatchdog=null,objectCutoff=-Infinity;
 import {CameraFrames} from './camera-frames.js?v=presented-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
@@ -50,7 +53,7 @@ let visibleNotes=[];const scheduled=[],reduced=matchMedia('(prefers-reduced-moti
 function status(text){$('status').textContent=text||motionFailure}
 function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=`grayscale(1) sepia(.12) brightness(${1.35-threshold*.55}) contrast(.88)`;rebuildNotes()}
 function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
-function releaseCamera(){cameraFrames.reset();motionWidth=320;motionCost=0;motionSamples=0;clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
+function releaseCamera(){cameraFrames.reset();motionWidth=320;motionCost=0;motionSamples=0;clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();objectTracks.reset();objectCutoff=performance.now();objectLast=-Infinity;motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 let cameraStartPending=null;
 async function startCamera(){if(cameraStartPending)return cameraStartPending;cameraStartPending=initializeCamera();try{await cameraStartPending}finally{cameraStartPending=null}}
 async function initializeCamera(){if(cameraBusy||stream)return;cameraBusy=true;const generation=++cameraGeneration;$('camera').disabled=true;status('Opening your camera…');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS and a supported browser');const incoming=await navigator.mediaDevices.getUserMedia({audio:false,video:{frameRate:{ideal:30,max:30},facingMode:{ideal:facing},width:{ideal:640},height:{ideal:840}}});if(generation!==cameraGeneration){incoming.getTracks().forEach(t=>t.stop());return}stream=incoming;video.srcObject=stream;await video.play();if(generation!==cameraGeneration)return;rebuildNotes();$('camera').hidden=true;status('')}catch(error){$('camera').hidden=false;status(error.name==='NotAllowedError'?'Enable camera access in your browser to play.':`Camera unavailable. ${error.message}.`)}finally{cameraBusy=false;$('camera').disabled=false}}
@@ -66,10 +69,10 @@ function mergeTracking(time){
 }
 
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
-function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();motionFailure='Motion tracking could not load. Reload to retry.';status(motionFailure);return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=opencv-1');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
+function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();motionFailure='Motion tracking could not load. Reload to retry.';status(motionFailure);return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=objectReady?objectTracks.update(d.flow||[],performance.now(),{uncertain:d.cameraUncertain,sensitivity:+$('motion-sensitivity').value/100,maximum:noteBudget}):[];motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
+function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=objects-1');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
 function sampleVideo(){if(video.readyState<2)return;
- const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
+ const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;sampleObjects(data,motionCanvas.width,motionCanvas.height,time);visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){objectTracks.reset();objectCutoff=time;clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
  if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}}
 
  }
@@ -159,7 +162,7 @@ document.addEventListener('keydown',e=>{if(settingsPanel.open&&e.key==='Escape')
 $('reverb').oninput=()=>{if(reverbWet)reverbWet.gain.setTargetAtTime(+$('reverb').value/100,audio.currentTime,.03)};
 $('release').oninput=()=>$('release-out').textContent=`${(+$('release').value/100).toFixed(2)} s`;$('echo').oninput=()=>{$('echo-out').textContent=`${$('echo').value}%`;if(wet&&audio)wet.gain.setTargetAtTime(+$('echo').value/180,audio.currentTime,.03)};
 setBudget(10);
-initMotion();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
+initMotion();initObjects();document.body.dataset.input='live';updateThreshold(.65);frame=requestAnimationFrame(render);startCamera();
 
 let noteFlash=null;
 function drawTracked(w,h){
@@ -174,7 +177,7 @@ function drawTracked(w,h){
   ctx.beginPath();ctx.moveTo(x-7,y);ctx.lineTo(x+7,y);ctx.moveTo(x,y-7);ctx.lineTo(x,y+7);ctx.stroke();
   ctx.strokeRect(x-4,y-4,8,8);
   const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-  ctx.font='10px Helvetica, Arial, sans-serif';const label=`${p.name==='object'?'motion':p.name} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,lx=Math.max(8,Math.min(w-100,x+12)),ly=Math.max(14,y-12);ctx.fillStyle='#ffffff';ctx.fillText(label,lx,ly);
+  ctx.font='10px Helvetica, Arial, sans-serif';const label=`${p.label||(p.name==='object'?'motion':p.name)} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,lx=Math.max(8,Math.min(w-100,x+12)),ly=Math.max(14,y-12);ctx.fillStyle='#ffffff';ctx.fillText(label,lx,ly);
   if(active){ctx.fillStyle='#ffffff';ctx.fillRect(x-16,y+13,32*expression.level,2)}
  }
  ctx.restore();
@@ -202,3 +205,27 @@ applyTheme(theme);$('light-mode').onchange=()=>applyTheme($('light-mode').checke
 
 document.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;const kind=button.id==='capture-loop'?'keep':button.id==='tour-next'?'next':button.matches('[data-close],#tour-close')?'close':'tap';try{if(!uiSounds)await setupAudio();else if(audio.state==='suspended')await audio.resume();uiSounds?.play(kind)}catch{} },{capture:true});
 document.addEventListener('change',e=>{if(e.target.matches('input[type=checkbox],select'))uiSounds?.play('tap')});
+
+function objectFailure(){objectReady=false;objectBusy=false;clearTimeout(objectTimer);clearTimeout(objectWatchdog);objectWorker?.terminate();objectWorker=null;objectTracks.reset();motionSources=[];tracked=[];expression.reset();motionFailure='Object recognition could not load. Reload to retry.';status(motionFailure)}
+function initObjects(){
+ try{
+  objectWorker=new Worker('object-worker.js?v=objects-1');
+  objectTimer=setTimeout(objectFailure,60000);
+  objectWorker.onmessage=({data:d})=>{
+   if(d.type==='ready'){clearTimeout(objectTimer);objectReady=true;return}
+   if(d.type==='unavailable'){objectFailure();return}
+   objectBusy=false;clearTimeout(objectWatchdog);
+   if(d.generation!==cameraGeneration)return;
+   if(d.type!=='result'){objectFailure();return}
+   objectInterval=Math.max(800,Math.min(2000,d.processingMs*3));
+   if(d.time>=objectCutoff)objectTracks.detect(d.predictions,d.time,performance.now());
+  };
+  objectWorker.onerror=objectFailure;
+ }catch{objectFailure()}
+}
+function sampleObjects(data,width,height,time){
+ if(!objectReady||objectBusy||!liveRunning||document.hidden||time-objectLast<objectInterval)return;
+ objectBusy=true;objectLast=time;const copy=data.slice();
+ objectWatchdog=setTimeout(objectFailure,10000);
+ objectWorker.postMessage({type:'frame',data:copy,width,height,time,generation:cameraGeneration},[copy.buffer]);
+}

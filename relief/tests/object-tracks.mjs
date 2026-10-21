@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {ObjectTracks} from '../object-tracks.js';
+const prediction=(name='person',x=.2)=>({class:name,score:.9,box:{x,y:.2,w:.2,h:.4}});
+const flow=(dx=.004,x=.24)=>Array.from({length:12},(_,i)=>({x:x+(i%3)*.02,y:.24+Math.floor(i/3)*.03,dx,dy:0,rx:dx,ry:0}));
+const advance=(t,points,base=0)=>{let result;for(let i=1;i<=3;i++)result=t.update(points,base+i*83);return result};
+let t=new ObjectTracks();assert.equal(advance(t,flow()).length,0,'Unrecognized pixels never become nodes');
+t.detect([prediction()],300);assert.equal(advance(t,flow(0),300).length,0,'Stationary recognized person silent');
+assert.equal(advance(t,flow(),600).length,1,'Many features on one person yield one node');
+const id=t.tracks[0].id;t.detect([prediction()],900);assert.equal(t.tracks[0].id,id,'Identity persists across detections');
+assert.equal(advance(t,flow().map(p=>({...p,rx:0})),900).length,0,'Camera motion alone silent');
+assert.equal(t.update(flow(),1250,{uncertain:true}).length,0,'Unreliable alignment silent');
+t=new ObjectTracks();t.detect([prediction(),prediction()],0);assert.equal(t.tracks.length,1,'Duplicate detections suppressed');
+t=new ObjectTracks();t.detect([prediction('chair'),{...prediction(),score:.2}],0);assert.equal(t.tracks.length,0,'Class and confidence gates');
+t=new ObjectTracks();t.detect([prediction(),prediction('truck',.65)],0);assert.equal(advance(t,[...flow(),...flow(.004,.69)]).length,2,'One node for each moving object');
+assert.equal(t.update(flow(),3000).length,0,'Expired recognition cannot trigger');
+t.detect([prediction()],0,3000);assert.equal(t.tracks.length,0,'Late detection discarded');
+t.reset();assert.equal(advance(t,flow()).length,0,'Scene reset clears identities');
+console.log('Object identity, motion and expiry checks passed');

@@ -1,7 +1,7 @@
 name: OpenCV browser checks
 on:
   push:
-    branches: [main, opencv-motion]
+    branches: [main, opencv-motion, object-motion]
     paths: ['relief/**', '.github/workflows/opencv-check.yml']
   workflow_dispatch:
 permissions:
@@ -17,4 +17,6 @@ jobs:
           node-version: '22'
       - run: npm install --no-save playwright@1.56.1
       - run: npx playwright install --with-deps chromium
+      - run: node relief/tests/object-tracks.mjs
+      - run: curl -fL https://raw.githubusercontent.com/tensorflow/tfjs-models/master/coco-ssd/demo/cat.jpg -o relief/tests/cat-fixture.jpg
       - run: node relief/tests/opencv-browser.mjs

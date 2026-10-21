@@ -10,7 +10,7 @@ class OpenCVMotion {
   if(w!==this.width||h!==this.height||this.lastTime!==null&&time-this.lastTime>350){this.reset();this.width=w;this.height=h}
   const dt=this.lastTime===null?60:Math.max(1,time-this.lastTime);this.lastTime=time;
   const rgba=mat(h,w,cv.CV_8UC4),gray=mat();rgba.data.set(data);cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);
-  const result={sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
+  const result={flow:[],sources:[],state:'learning',cameraMotion:{x:0,y:0},cameraUncertain:false};
   try {
    let survivors=[];
    if(this.previous&&this.features.length>=4){
@@ -47,7 +47,7 @@ class OpenCVMotion {
       p.hits=consistent?p.hits+1:1;p.evidence=time;p.lastRx=p.rx;p.lastRy=p.ry;
       if(p.hits>=3)moving.push(p);
      }else if(result.cameraUncertain||time-(p.evidence||0)>180)p.hits=0;
-     survivors.push(p);
+     result.flow.push({x:p.oldX/w,y:p.oldY/h,dx:p.dx/w,dy:p.dy/h,rx:p.rx/w,ry:p.ry/h});survivors.push(p);
     }
     const groups=[];
     for(const p of moving){const g=groups.find(g=>g.some(q=>Math.hypot(p.x-q.x,p.y-q.y)<Math.max(12,w*.07)&&Math.hypot(p.rx-q.rx,p.ry-q.ry)<1.5));if(g)g.push(p);else groups.push([p])}
