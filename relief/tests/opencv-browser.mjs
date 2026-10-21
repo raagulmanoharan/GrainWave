@@ -64,22 +64,33 @@ try{
  });
  console.log({pixelCheck});assert(pixelCheck.plain);assert(pixelCheck.sameBlock);assert(pixelCheck.changed>100);assert.equal(pixelCheck.colored,0);assert.equal(pixelCheck.error,0);assert(pixelCheck.live);assert.equal(pixelCheck.videoVisibility,'hidden');
 
- // Motion grain stays inside detected boxes and reuses its texture.
- const regionalGrain=await page.evaluate(async()=>{
-  const {MotionGrain}=await import('./motion-grain.js?v=regions-1');
+ // One shader pass: detailed moving regions, stronger grain, unchanged background.
+ const regionalTone=await page.evaluate(async()=>{
+  const {PixelPreview}=await import('./pixel-preview.js?v=motion-tone-1');
   const {analysisSize}=await import('./camera-frames.js?v=budget-1');
-  const c=document.createElement('canvas');c.width=c.height=64;const ctx=c.getContext('2d'),grain=new MotionGrain();
-  const reset=()=>{ctx.fillStyle='rgb(128,128,128)';ctx.fillRect(0,0,64,64)};reset();
-  const region={confirmed:true,time:100,box:{x:.25,y:.25,w:.5,h:.5}};
-  grain.draw(ctx,64,64,[region],100);const cached=grain.pattern,data=ctx.getImageData(0,0,64,64).data;let inside=0,outside=0;
-  for(let y=0;y<64;y++)for(let x=0;x<64;x++){if(data[(y*64+x)*4]!==128){if(x>=16&&x<48&&y>=16&&y<48)inside++;else outside++}}
-  grain.draw(ctx,64,64,[region],100);const reused=grain.pattern===cached;reset();grain.draw(ctx,64,64,[region],500);
-  const expiredChanged=ctx.getImageData(0,0,64,64).data.some((v,i)=>i%4!==3&&v!==128);
+  const source=document.createElement('canvas');source.width=source.height=64;source.currentTime=1;
+  const c=source.getContext('2d');c.fillStyle='rgb(128,128,128)';c.fillRect(0,0,64,64);
+  const out=document.createElement('canvas'),effect=new PixelPreview(out),gl=effect.gl;
+  let uploads=0;const upload=gl.texImage2D.bind(gl);gl.texImage2D=(...args)=>{uploads++;return upload(...args)};
+  const read=()=>{const data=new Uint8Array(64*64*4);gl.readPixels(0,0,64,64,gl.RGBA,gl.UNSIGNED_BYTE,data);return data};
+  effect.draw(source,64,64,.65,false,.16);const baseline=read();
+  const regions=[{box:{x:.25,y:.25,w:.5,h:.5}}];
+  effect.draw(source,64,64,.65,false,.16,regions);const moving=read();
+  let outside=0,baseNoise=0,motionNoise=0,count=0;
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+   const i=(y*64+x)*4;
+   if(x<16||x>=48||y<16||y>=48){if(baseline[i]!==moving[i])outside++}
+   if(x>=20&&x<44&&y>=20&&y<44){baseNoise+=(baseline[i]-128)**2;motionNoise+=(moving[i]-128)**2;count++}
+  }
+  effect.draw(source,64,64,.65,false,.16,[]);const cleared=read().every((v,i)=>v===baseline[i]),regionOnlyUploads=uploads;
+  for(let x=0;x<64;x++){c.fillStyle=x%2?'rgb(150,150,150)':'rgb(100,100,100)';c.fillRect(x,0,1,64)}source.currentTime++;
+  effect.draw(source,64,64,.65,false,0,regions);const detail=read();
+  let even=0,odd=0;for(let y=20;y<44;y++)for(let x=20;x<44;x++){if(x%2)odd+=detail[(y*64+x)*4];else even+=detail[(y*64+x)*4]}
   const sizes=[[390,720],[260,650],[1280,600]].map(([w,h])=>analysisSize(w,h));
-  return {inside,outside,reused,expiredChanged,sizes};
+  return {outside,noiseRatio:motionNoise/baseNoise,cleared,regionOnlyUploads,detailDifference:(odd-even)/(24*12),error:gl.getError(),sizes};
  });
- console.log({regionalGrain});assert(regionalGrain.inside>500);assert.equal(regionalGrain.outside,0);assert(regionalGrain.reused);assert(!regionalGrain.expiredChanged);
- for(const s of regionalGrain.sizes){assert(s.width<=320&&s.height<=640&&s.width*s.height<=160000)}
+ console.log({regionalTone});assert.equal(regionalTone.outside,0);assert(regionalTone.noiseRatio>5);assert(regionalTone.cleared);assert.equal(regionalTone.regionOnlyUploads,1);assert(regionalTone.detailDifference>60);assert.equal(regionalTone.error,0);
+ for(const s of regionalTone.sizes){assert(s.width<=320&&s.height<=640&&s.width*s.height<=160000)}
 
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
  // Count presented frames, not callback invocations: software WebGL can delay JS callbacks.
