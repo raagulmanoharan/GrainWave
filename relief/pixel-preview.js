@@ -39,7 +39,7 @@ void main(){
  draw(source,w,h,depth,mirror=false,grain=.16){
   if(!this.ready)return false;
   const sw=source.videoWidth||source.width,sh=source.videoHeight||source.height;if(!sw||!sh||!w||!h)return false;
-  const d=Math.min(devicePixelRatio||1,1.5),width=Math.round(w*d),height=Math.round(h*d);
+  const d=Math.min(1,384/w,512/h),width=Math.round(w*d),height=Math.round(h*d);
   const key=[source.currentTime,width,height,depth,mirror,grain].join(':');if(key===this.key)return true;
   try{
    const gl=this.gl,u=this.uniforms;if(this.canvas.width!==width||this.canvas.height!==height){this.canvas.width=width;this.canvas.height=height}
