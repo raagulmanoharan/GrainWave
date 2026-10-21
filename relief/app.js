@@ -1,13 +1,12 @@
 import {CameraFrames} from './camera-frames.js?v=presented-1';
 import {UISounds} from './ui-sounds.js';
 let uiSounds=null;
-import {GrainCrossfade} from './grain-crossfade.js';
-const grainCrossfade=new GrainCrossfade();
+
 import {MotionArpeggio} from './motion-arpeggio.js';
 const motionArpeggio=new MotionArpeggio();let pendingArpeggio=[];
 import {leadModulation} from './lead-modulation.js';
 import {Onboarding} from './onboarding.js?v=quiet-art-1';
-import {GrainProcessor} from './grain-process.js?v=clarity-1';
+
 import {AmbientBed} from './ambient.js?v=lofi-budget-1';
 let ambientBed=null;
 import {LandingType} from './landing-type.js?v=cells-1';
@@ -29,7 +28,7 @@ let lastLayerPitch=null;let capturedNoticeUntil=0;let lastCopyBeat=-1;
 import {LoopRack} from './note-buffer.js?v=rack-1';
 const noteBuffer=new LoopRack();
 let song=new MotifSong(Math.random,{generative:true});
-import {MotionTracker} from './motion.js?v=motion-evidence-1';
+
 import {MotionExpression} from './expression.js?v=motion-evidence-1';
 import {pitch} from './music.js';
 import {PointTracker} from './tracking.js?v=motion-evidence-1';
@@ -38,19 +37,20 @@ let cameraOffset={x:0,y:0},motionWorker=null,motionBusy=false,lastLiveTime=0;
 import {fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
 const cameraFrames=new CameraFrames(video);
+canvas.parentElement.insertBefore(video,canvas);video.hidden=false;video.setAttribute('aria-hidden','true');
 const grainCanvas=document.createElement('canvas'),grainContext=grainCanvas.getContext('2d',{willReadFrequently:true});let feedbackPixels=null,lastGrain=0,grainData=null,lastPercussion=-Infinity,percussionStep=0,songStep=0,nextSongTime=0;
 
-let motionWidth=480,motionCost=0,motionSamples=0;
+let motionWidth=320,motionCost=0,motionSamples=0,motionReady=false,lastMotionSample=-Infinity;
 let facing='environment',tracked=[],motionSources=[];const motionCanvas=document.createElement('canvas'),mc=motionCanvas.getContext('2d',{willReadFrequently:true});
-const motionTracker=new MotionTracker({enhance:true}),tracker=new PointTracker();
+const motionTracker={cameraUncertain:false,reset(){this.cameraUncertain=false;lastMotionSample=-Infinity}},tracker=new PointTracker();
 let noteBudget=10,wet=null,reverbWet=null,delayFeedback=null,feedbackShaper=null;
 let stream=null,points=[],threshold=.5,mode='camera',cameraBusy=false,cameraGeneration=0,frame=0,audio,master,delay,timer,tick=0,nextTime=0,visibleTick=0,playing=false,liveRunning=false,audioStarting=false,pointer=null;
 let currentPitch=null;
 let visibleNotes=[];const scheduled=[],reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function status(text){$('status').textContent=text}
-function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);rebuildNotes()}
+function updateThreshold(value){threshold=Math.max(0,Math.min(1,value));$('threshold-out').textContent=`${Math.round(threshold*100)}%`;$('threshold').value=Math.round(threshold*100);video.style.filter=`grayscale(1) sepia(.12) brightness(${1.35-threshold*.55}) contrast(.88)`;rebuildNotes()}
 function clearGestureRun(){pendingArpeggio=[];motionArpeggio.reset();lastLayerPitch=null;lastLiveTime=-Infinity;noteFlash=null}
-function releaseCamera(){cameraFrames.reset();motionWidth=480;motionCost=0;motionSamples=0;grainCrossfade.reset();clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:"reset"});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
+function releaseCamera(){cameraFrames.reset();motionWidth=320;motionCost=0;motionSamples=0;clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();accent=null;motionEcho.reset();feedbackPixels=null;grainData=null;tracked=[];tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];cameraGeneration++;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 let cameraStartPending=null;
 async function startCamera(){if(cameraStartPending)return cameraStartPending;cameraStartPending=initializeCamera();try{await cameraStartPending}finally{cameraStartPending=null}}
 async function initializeCamera(){if(cameraBusy||stream)return;cameraBusy=true;const generation=++cameraGeneration;$('camera').disabled=true;status('Opening your camera…');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS and a supported browser');const incoming=await navigator.mediaDevices.getUserMedia({audio:false,video:{frameRate:{ideal:30,max:30},facingMode:{ideal:facing},width:{ideal:640},height:{ideal:840}}});if(generation!==cameraGeneration){incoming.getTracks().forEach(t=>t.stop());return}stream=incoming;video.srcObject=stream;await video.play();if(generation!==cameraGeneration)return;rebuildNotes();$('camera').hidden=true;status('')}catch(error){$('camera').hidden=false;status(error.name==='NotAllowedError'?'Enable camera access in your browser to play.':`Camera unavailable. ${error.message}.`)}finally{cameraBusy=false;$('camera').disabled=false}}
@@ -66,19 +66,19 @@ function mergeTracking(time){
 }
 
 function drawCamera(context,w,h){const crop=fitCover(video.videoWidth,video.videoHeight,w,h);context.save();if($('mirror-toggle').checked){context.translate(w,0);context.scale(-1,1)}context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,w,h);context.restore()}
-function receiveMotion(d){if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
-function initMotion(){try{motionWorker=new Worker('motion-worker.js?v=motion-evidence-1',{type:'module'});motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker.terminate();motionWorker=null;motionWidth=320;motionBusy=false;motionTracker.reset()}}catch{motionWorker=null;motionWidth=320}}
+function receiveMotion(d){if(d.type==='ready'){motionReady=true;trackingStatus('Move gently to begin');return}if(d.type==='unavailable'){motionReady=false;motionBusy=false;motionSources=[];tracked=[];expression.reset();status('Motion tracking could not load. Reload to retry.');return}if(d.generation!==cameraGeneration)return;motionBusy=false;if(d.type!=='result'){motionSources=[];tracked=[];expression.reset();motionTracker.cameraUncertain=true;return}if(Number.isFinite(d.processingMs)){motionCost=motionSamples?motionCost*.8+d.processingMs*.2:d.processingMs;motionSamples++;if(motionSamples>=6&&motionCost>90)motionWidth=320}motionSources=d.sources;motionTracker.state=d.state;motionTracker.cameraMotion=d.cameraMotion;motionTracker.cameraUncertain=d.cameraUncertain;cameraOffset.x+=d.cameraMotion.x;cameraOffset.y+=d.cameraMotion.y;mergeTracking(performance.now())}
+function initMotion(){trackingStatus('Loading motion tracking…');try{motionWorker=new Worker('motion-worker.js?v=opencv-1');motionWorker.onmessage=({data:d})=>receiveMotion(d);motionWorker.onerror=()=>{motionWorker?.terminate();motionWorker=null;receiveMotion({type:'unavailable'})}}catch{receiveMotion({type:'unavailable'})}}
 function sampleVideo(){if(video.readyState<2)return;
- const time=performance.now();if(!motionBusy&&cameraFrames.take('motion',cameraGeneration)){motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
- if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}
- else{const sources=motionTracker.update(data,motionCanvas.width,motionCanvas.height,time,noteBudget,+$('motion-sensitivity').value/100);receiveMotion({type:'result',generation:cameraGeneration,sources,state:motionTracker.state,cameraMotion:motionTracker.cameraMotion,cameraUncertain:motionTracker.cameraUncertain})}}
+ const time=performance.now();if(motionReady&&motionWorker&&!motionBusy&&time-lastMotionSample>=83&&cameraFrames.take('motion',cameraGeneration)){lastMotionSample=time;motionCanvas.id='motion-analysis';const motionHeight=Math.round(motionWidth*canvas.clientHeight/canvas.clientWidth);if(motionCanvas.width!==motionWidth||motionCanvas.height!==motionHeight){motionCanvas.width=motionWidth;motionCanvas.height=motionHeight}drawCamera(mc,motionCanvas.width,motionCanvas.height);const data=mc.getImageData(0,0,motionCanvas.width,motionCanvas.height).data;visualLoop.frame(data,motionCanvas.width,motionCanvas.height,time);if(grainCanvas.width!==motionCanvas.width||grainCanvas.height!==motionCanvas.height){grainCanvas.width=motionCanvas.width;grainCanvas.height=motionCanvas.height}grainContext.drawImage(motionCanvas,0,0);if(sceneMemory.sample(data,motionCanvas.width,motionCanvas.height,time)&&!noteBuffer.loops.length){clearGestureRun();visualDistortion.reset();visualLoop.reset(time);loopHighlights=[];song=new MotifSong(Math.random,{generative:true});motionEcho.reset();expression.reset();accent=null;currentPitch=null;visibleNotes=[];master?.instrument?.port.postMessage({type:'silence'})}
+ if(motionWorker){motionBusy=true;motionWorker.postMessage({type:'frame',data,width:motionCanvas.width,height:motionCanvas.height,time,maximum:noteBudget,sensitivity:+$('motion-sensitivity').value/100,generation:cameraGeneration},[data.buffer])}}
+
  }
 
 $('camera').onclick=startCamera;
 $('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';points=[];await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
-$('mirror-toggle').onchange=()=>{grainCrossfade.reset();clearGestureRun();grainBusy=false;grainWorker?.postMessage({type:'reset'});grainFallback.reset();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
+$('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
 
-function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){drawCamera(ctx,w,h);drawGrain(w,h,time);if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
+function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo()}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){
@@ -178,20 +178,6 @@ function drawTracked(w,h){
   if(active){ctx.fillStyle='#ffffff';ctx.fillRect(x-16,y+13,32*expression.level,2)}
  }
  ctx.restore();
-}
-
-const grainInput=document.createElement('canvas'),grainInputContext=grainInput.getContext('2d',{willReadFrequently:true}),grainFallback=new GrainProcessor();let grainWorker=null,grainBusy=false;
-function receiveGrain(frame){if(frame.generation!==cameraGeneration)return;grainBusy=false;if(grainData&&grainCanvas.width===frame.width&&grainCanvas.height===frame.height){grainCrossfade.capture(grainCanvas,performance.now(),frame.generation)}else{grainCrossfade.reset();grainCrossfade.generation=frame.generation}if(grainCanvas.width!==frame.width||grainCanvas.height!==frame.height){grainCanvas.width=frame.width;grainCanvas.height=frame.height}grainData=new ImageData(frame.data,frame.width,frame.height);grainContext.putImageData(grainData,0,0)}
-try{grainWorker=new Worker('grain-worker.js?v=clarity-1',{type:'module'});grainWorker.onmessage=({data})=>receiveGrain(data);grainWorker.onerror=()=>{grainWorker?.terminate();grainWorker=null;grainBusy=false}}catch{}
-function drawGrain(w,h,time){
- if(!grainBusy&&cameraFrames.take('grain',cameraGeneration)){
-  const width=Math.max(1,Math.floor(Math.min(960,w*Math.min(devicePixelRatio,2),Math.sqrt(1200000*w/h)))),height=Math.max(1,Math.round(width*h/w));
-  if(grainInput.width!==width||grainInput.height!==height){grainInput.width=width;grainInput.height=height}
-  drawCamera(grainInputContext,width,height);const data=grainInputContext.getImageData(0,0,width,height).data;
-  const frame={data,width,height,drive:+$('distortion').value/100,threshold,playing,boxes:motionSources.map(p=>p.box).filter(Boolean),generation:cameraGeneration};
-  lastGrain=time;if(grainWorker){grainBusy=true;grainWorker.postMessage(frame,[data.buffer])}else receiveGrain({...frame,data:grainFallback.process(frame)});
- }
- if(grainData)grainCrossfade.draw(ctx,grainCanvas,w,h,time)
 }
 
 
