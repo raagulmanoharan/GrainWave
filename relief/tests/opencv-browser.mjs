@@ -7,7 +7,7 @@ const base=resolve('.');
 const server=createServer(async(req,res)=>{try{const path=resolve(base,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!path.startsWith(base+'/'))throw Error('path');res.setHeader('Content-Type',extname(path)==='.js'?'text/javascript':extname(path)==='.html'?'text/html':extname(path)==='.css'?'text/css':'application/octet-stream');res.end(await readFile(path));}catch{res.statusCode=404;res.end()}}).listen(8765,'127.0.0.1');
 const browser=await chromium.launch({headless:true,args:['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream']});
 try{
- const page=await browser.newPage();await page.goto('http://127.0.0.1:8765/relief/index.html');
+ const page=await browser.newPage({viewport:{width:390,height:720}});await page.goto('http://127.0.0.1:8765/relief/index.html');
  const results=await page.evaluate(async()=>{
   const worker=new Worker('./motion-worker.js?v=opencv-only-1');
   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Worker timed out')),45000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});
