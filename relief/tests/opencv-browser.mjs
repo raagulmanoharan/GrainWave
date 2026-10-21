@@ -65,7 +65,13 @@ try{
  console.log({pixelCheck});assert(pixelCheck.plain);assert(pixelCheck.sameBlock);assert(pixelCheck.changed>100);assert.equal(pixelCheck.colored,0);assert.equal(pixelCheck.error,0);assert(pixelCheck.live);assert.equal(pixelCheck.videoVisibility,'hidden');
 
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
- const cadence=await page.evaluate(()=>new Promise(resolve=>{const video=document.querySelector('#feed');let count=0;const begin=performance.now();const next=()=>{count++;if(performance.now()-begin>=2000)resolve(count);else video.requestVideoFrameCallback(next)};video.requestVideoFrameCallback(next)}));console.log({videoFramesInTwoSeconds:cadence});assert(cadence>=25,'Video must continue while tracking runs');
+ // Count presented frames, not callback invocations: software WebGL can delay JS callbacks.
+ const cadence=await page.evaluate(()=>new Promise(resolve=>{
+  const video=document.querySelector('#feed');let callbacks=0,first=null;const begin=performance.now();
+  const next=(time,metadata)=>{callbacks++;first??=metadata.presentedFrames;if(time-begin>=2000)resolve({presented:metadata.presentedFrames-first,callbacks});else video.requestVideoFrameCallback(next)};
+  video.requestVideoFrameCallback(next);
+ }));console.log({cameraCadence:cadence});assert(cadence.presented>=25,'Camera frames must continue while tracking runs');
+
  const blocked=await browser.newPage();await blocked.context().route('**/opencv.js',route=>route.abort());await blocked.goto('http://127.0.0.1:8765/relief/index.html');
  await blocked.waitForFunction(()=>document.querySelector('#status').textContent.includes('could not load'),{},{timeout:10000});
  assert(await blocked.locator('#feed').evaluate(v=>v.readyState>=2));
