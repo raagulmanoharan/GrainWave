@@ -1,5 +1,6 @@
+import {PixelPreview} from './pixel-preview.js?v=pixels-1';
 import {mergeMotionSources} from './motion-sources.js?v=regions-1';
-import {previewFilter,PrintTexture} from './preview-tone.js?v=print-1';
+import {previewFilter,PrintTexture} from './preview-tone.js?v=pixels-1';
 const printTexture=new PrintTexture();
 import {ObjectTracks} from './object-tracks.js?v=detection-2';
 const objectTracks=new ObjectTracks();
@@ -44,6 +45,7 @@ import {fitCover} from './dither.js';
 const $=id=>document.getElementById(id),canvas=$('cloud'),ctx=canvas.getContext('2d'),video=$('feed');
 const cameraFrames=new CameraFrames(video);
 canvas.parentElement.insertBefore(video,canvas);video.hidden=false;video.setAttribute('aria-hidden','true');
+const pixelCanvas=document.createElement('canvas');pixelCanvas.id='pixel-preview';pixelCanvas.setAttribute('aria-hidden','true');pixelCanvas.hidden=true;canvas.parentElement.insertBefore(pixelCanvas,canvas);const pixelPreview=new PixelPreview(pixelCanvas);
 const grainCanvas=document.createElement('canvas'),grainContext=grainCanvas.getContext('2d',{willReadFrequently:true});let feedbackPixels=null,lastGrain=0,grainData=null,lastPercussion=-Infinity,percussionStep=0,songStep=0,nextSongTime=0;
 
 let motionWidth=320,motionCost=0,motionSamples=0,motionReady=false,motionFailure='',lastMotionSample=-Infinity;
@@ -84,7 +86,7 @@ $('camera').onclick=startCamera;
 $('settings-flip-camera').onchange=async()=>{const toggle=$('settings-flip-camera');if(cameraBusy){toggle.checked=facing==='user';return}toggle.disabled=true;const previous=facing;releaseCamera();facing=toggle.checked?'user':'environment';points=[];await startCamera();if(!stream){facing=previous;toggle.checked=facing==='user';await startCamera()}toggle.disabled=false};
 $('mirror-toggle').onchange=()=>{video.style.transform=$('mirror-toggle').checked?'scaleX(-1)':'';clearGestureRun();visualDistortion.reset();visualLoop.reset(performance.now());loopHighlights=[];sceneMemory.reset();song=new MotifSong(Math.random,{generative:true});motionEcho.reset();cameraGeneration++;tracker.reset();expression.reset();cameraOffset={x:0,y:0};motionTracker.reset();motionBusy=false;motionWorker?.postMessage({type:'reset'});motionSources=[];tracked=[];rebuildNotes();sampleVideo()};
 
-function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo();sampleRecognition(time)}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}printTexture.draw(ctx,w,h)}else{ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
+function render(time){if(audio?.state==='running')ambientBed?.advance();const d=Math.min(devicePixelRatio,2),w=canvas.width/d,h=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);if((playing||onboarding.active)&&stream){sampleVideo();sampleRecognition(time)}ctx.clearRect(0,0,w,h);if(stream&&video.readyState>=2){const pixelsReady=pixelPreview.draw(video,w,h,threshold,$('mirror-toggle').checked);pixelCanvas.hidden=!pixelsReady;video.style.visibility=pixelsReady?'hidden':'visible';if(playing){motionEcho.draw(ctx,w,h,time,playing? +$('echo').value/100:0,+$('distortion').value/100);visualDistortion.draw(ctx,w,h,time,+$('distortion').value/100)}if(!pixelsReady)printTexture.draw(ctx,w,h)}else{pixelCanvas.hidden=true;video.style.visibility='visible';ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h)}ctx.globalAlpha=1;if(playing&&audio){perform(time)}if(playing){drawTracked(w,h)}frame=requestAnimationFrame(render)}
 let audioSetupPending=null,audioReady=false;
 // Unlock synchronously within the user gesture, before worklet/network awaits.
 function unlockAudio(){

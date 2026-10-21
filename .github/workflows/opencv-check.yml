@@ -1,7 +1,7 @@
 name: OpenCV browser checks
 on:
   push:
-    branches: [main, opencv-motion, object-motion, tracking-contrast, detection-feedback, print-preview, coherent-regions]
+    branches: [main, opencv-motion, object-motion, tracking-contrast, detection-feedback, print-preview, coherent-regions, pixel-preview]
     paths: ['relief/**', '.github/workflows/opencv-check.yml']
   workflow_dispatch:
 permissions:

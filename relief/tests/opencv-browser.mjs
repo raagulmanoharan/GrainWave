@@ -59,6 +59,23 @@ try{
  });
  console.log({preview});assert.equal(preview.colored,0);assert.equal(preview.onset,0);assert(preview.middle>0&&preview.middle<80);assert(preview.cached);assert(preview.filter.includes('contrast(1.8)'));
 
+
+ // Verify real GPU block sampling, fine grain, and a live shader preview.
+ const pixelCheck=await page.evaluate(async()=>{
+  const {PixelPreview}=await import('./pixel-preview.js?v=pixels-1');
+  const source=document.createElement('canvas');source.width=source.height=64;
+  const c=source.getContext('2d');for(let x=0;x<64;x++){c.fillStyle=`rgb(${x*3},${x*3},${x*3})`;c.fillRect(x,0,1,64)}
+  const output=document.createElement('canvas'),effect=new PixelPreview(output);
+  const plain=effect.draw(source,64,64,.65,false,0),gl=effect.gl;
+  const read=()=>{const pixels=new Uint8Array(output.width*output.height*4);gl.readPixels(0,0,output.width,output.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels};
+  const before=read(),a=(20*output.width+20)*4,b=a+4;
+  effect.draw(source,64,64,.65,false,.16);const after=read();
+  let colored=0,changed=0;for(let i=0;i<after.length;i+=4){if(after[i]!==after[i+1]||after[i]!==after[i+2])colored++;if(after[i]!==before[i])changed++}
+  const live=document.querySelector('#pixel-preview');
+  return {plain,sameBlock:before[a]===before[b],changed,colored,error:gl.getError(),live:!live.hidden,videoVisibility:getComputedStyle(document.querySelector('#feed')).visibility};
+ });
+ console.log({pixelCheck});assert(pixelCheck.plain);assert(pixelCheck.sameBlock);assert(pixelCheck.changed>100);assert.equal(pixelCheck.colored,0);assert.equal(pixelCheck.error,0);assert(pixelCheck.live);assert.equal(pixelCheck.videoVisibility,'hidden');
+
  // Simulate a blocked runtime: the camera must continue and failure must be visible.
  const cadence=await page.evaluate(()=>new Promise(resolve=>{const video=document.querySelector('#feed');let count=0;const begin=performance.now();const next=()=>{count++;if(performance.now()-begin>=2000)resolve(count);else video.requestVideoFrameCallback(next)};video.requestVideoFrameCallback(next)}));console.log({videoFramesInTwoSeconds:cadence});assert(cadence>=25,'Video must continue while tracking runs');
  const blocked=await browser.newPage();await blocked.context().route('**/opencv.js',route=>route.abort());await blocked.goto('http://127.0.0.1:8765/relief/index.html');

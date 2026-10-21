@@ -19,10 +19,9 @@ export class PrintTexture{
    for(let i=0;i<image.data.length;i+=4){
     seed=(Math.imul(seed,1664525)+1013904223)>>>0;
     const white=seed&256;image.data[i]=image.data[i+1]=image.data[i+2]=white?255:0;
-    image.data[i+3]=28+(seed>>>24)%68;
+    image.data[i+3]=12+(seed>>>24)%26;
    }
-   c.putImageData(image,0,0);c.fillStyle='rgba(0,0,0,.32)';
-   for(let y=0;y<128;y+=4)for(let x=0;x<128;x+=4){c.beginPath();c.arc(x+(y%8?2:0),y,.65,0,Math.PI*2);c.fill()}
+   c.putImageData(image,0,0);
    this.pattern=ctx.createPattern(tile,'repeat');
   }
   ctx.save();ctx.fillStyle=this.pattern;ctx.fillRect(0,0,w,h);ctx.restore();

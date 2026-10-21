@@ -513,3 +513,7 @@ body[data-onboarding=true] #landing-type{visibility:visible}
 
 /* Native video stays on the browser compositor; analysis never gates display. */
 .stage #feed{display:block;position:absolute;left:calc(var(--frame-left) + var(--grid-cell));top:calc(var(--frame-top) + var(--grid-cell));width:calc(100% - var(--frame-left) - var(--frame-right) - var(--grid-cell)*2);height:calc(100% - var(--frame-top) - var(--frame-bottom) - var(--grid-cell)*2);object-fit:cover;pointer-events:none;filter:grayscale(1) brightness(1.3575) contrast(1.8)}
+
+/* GPU pixel preview shares the exact camera viewport, beneath the note overlay. */
+.stage #pixel-preview{display:block;position:absolute;left:calc(var(--frame-left) + var(--grid-cell));top:calc(var(--frame-top) + var(--grid-cell));width:calc(100% - var(--frame-left) - var(--frame-right) - var(--grid-cell)*2);height:calc(100% - var(--frame-top) - var(--frame-bottom) - var(--grid-cell)*2);object-fit:cover;pointer-events:none;}
+.stage #pixel-preview[hidden]{display:none}
