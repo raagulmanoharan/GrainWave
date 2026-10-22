@@ -207,19 +207,20 @@ initMotion();document.body.dataset.input='live';updateThreshold(.65);frame=reque
 
 let noteFlash=null;
 function drawTracked(w,h){
+ const ink=mosaicLook?'#000000':'#ffffff';
  const now=performance.now();loopHighlights=loopHighlights.filter(p=>p.end>now);const sources=liveRunning?tracked.filter(p=>(expression.active.get(p.id)||0)>now).slice(0,6).map(p=>({...p,midi:[...visualLoop.points.values()].reverse().find(n=>n.sourceId===p.id)?.midi??p.midi})):[];
- ctx.save();if(noteFlash&&liveRunning&&noteFlash.until>now){const x=noteFlash.point.x*w,y=noteFlash.point.y*h;ctx.fillStyle='#fff';ctx.globalAlpha=(noteFlash.until-now)/180;ctx.fillRect(x-4,y-4,8,8);ctx.globalAlpha=1}for(const event of loopHighlights){if(event.start<=now){ctx.fillStyle=loopColors[(event.loopId-1)%loopColors.length];ctx.fillRect(Math.round(event.point.x*w),Math.round(event.point.y*h),2,2)}}ctx.lineWidth=1;ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.setLineDash([]);ctx.font='10px Helvetica, Arial, sans-serif';
+ ctx.save();if(noteFlash&&liveRunning&&noteFlash.until>now){const x=noteFlash.point.x*w,y=noteFlash.point.y*h;ctx.fillStyle=ink;ctx.globalAlpha=(noteFlash.until-now)/180;ctx.fillRect(x-4,y-4,8,8);ctx.globalAlpha=1}for(const event of loopHighlights){if(event.start<=now){ctx.fillStyle=loopColors[(event.loopId-1)%loopColors.length];ctx.fillRect(Math.round(event.point.x*w),Math.round(event.point.y*h),2,2)}}ctx.lineWidth=1;ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.setLineDash([]);ctx.font='10px Helvetica, Arial, sans-serif';
  const anchor=sources.find(p=>(p.sourceId||p.id)===expression.point.id)||sources[0];
- if(anchor){ctx.strokeStyle='#ffffff';for(const p of sources){if(p===anchor)continue;ctx.beginPath();ctx.moveTo(anchor.x*w,anchor.y*h);ctx.lineTo(p.x*w,p.y*h);ctx.stroke()}}
+ if(anchor){ctx.strokeStyle=ink;for(const p of sources){if(p===anchor)continue;ctx.beginPath();ctx.moveTo(anchor.x*w,anchor.y*h);ctx.lineTo(p.x*w,p.y*h);ctx.stroke()}}
  for(const p of sources){
   const x=p.x*w,y=p.y*h,active=liveRunning&&expression.level>.02&&(p.sourceId||p.id)===expression.point.id;
-  ctx.lineWidth=1;ctx.strokeStyle='#ffffff';ctx.fillStyle='#ffffff';
+  ctx.lineWidth=1;ctx.strokeStyle=ink;ctx.fillStyle=ink;
   if(p.box){const b=p.box,bx=Math.max(0,b.x*w-5),by=Math.max(0,b.y*h-5),bw=Math.min(w-bx,b.w*w+10),bh=Math.min(h-by,b.h*h+10);ctx.strokeRect(bx,by,bw,bh);if(accent&&accent.id===p.id&&now<accent.until){ctx.save();ctx.globalAlpha=.18;ctx.fillRect(bx,by,bw,bh);ctx.restore()}}
   ctx.beginPath();ctx.moveTo(x-7,y);ctx.lineTo(x+7,y);ctx.moveTo(x,y-7);ctx.lineTo(x,y+7);ctx.stroke();
   ctx.strokeRect(x-4,y-4,8,8);
   const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-  ctx.font='10px Helvetica, Arial, sans-serif';const label=`${p.label||(p.name==='object'?'motion':p.name)} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,lx=Math.max(8,Math.min(w-100,x+12)),ly=Math.max(14,y-12);ctx.fillStyle='#ffffff';ctx.fillText(label,lx,ly);
-  if(active){ctx.fillStyle='#ffffff';ctx.fillRect(x-16,y+13,32*expression.level,2)}
+  ctx.font='10px Helvetica, Arial, sans-serif';const label=`${p.label||(p.name==='object'?'motion':p.name)} · ${names[p.midi%12]}${Math.floor(p.midi/12)-1}`,lx=Math.max(8,Math.min(w-100,x+12)),ly=Math.max(14,y-12);ctx.fillStyle=ink;ctx.fillText(label,lx,ly);
+  if(active){ctx.fillStyle=ink;ctx.fillRect(x-16,y+13,32*expression.level,2)}
  }
  ctx.restore();
 }
