@@ -1,7 +1,7 @@
 name: OpenCV browser checks
 on:
   push:
-    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic, loop-echo, expressive-tones]
+    branches: [main, opencv-cleanup, region-grain, motion-tone, fine-mosaic, loop-echo, expressive-tones, motion-foreground]
     paths: ['relief/**', '.github/workflows/opencv-check.yml']
   workflow_dispatch:
 permissions:

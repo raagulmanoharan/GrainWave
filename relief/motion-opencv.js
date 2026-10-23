@@ -80,6 +80,22 @@ class OpenCVMotion {
    }
    result.sources=distinct;
    this.objects=result.sources;
+   // Small visual-only mask follows coherent feature clusters, not bounding boxes.
+   // Never feed this mask or its smoothing back into motion/note detection.
+   if(!result.cameraUncertain&&distinct.length){
+    const mw=80,mh=Math.max(1,Math.min(160,Math.round(h/w*mw))),sx=mw/w,sy=mh/h;
+    const mask=mat(mh,mw,cv.CV_8UC1,new cv.Scalar(0));
+    for(const source of distinct.slice(0,6)){
+     const ids=new Set(source.features),points=survivors.filter(p=>ids.has(p.id)).slice(0,32);
+     const radius=Math.max(2,Math.round(7*sx));
+     for(let i=0;i<points.length;i++){
+      const p=points[i],at=new cv.Point(Math.round(p.x*sx),Math.round(p.y*sy));
+      cv.circle(mask,at,radius,new cv.Scalar(255),-1);
+      for(let j=0;j<i;j++){const q=points[j];if(Math.hypot(p.x-q.x,p.y-q.y)<Math.max(16,w*.09))cv.line(mask,at,new cv.Point(Math.round(q.x*sx),Math.round(q.y*sy)),new cv.Scalar(255),radius*2)}
+     }
+    }
+    result.foreground={width:mw,height:mh,data:new Uint8Array(mask.data),time};
+   }
    this.previous?.delete();this.previous=gray.clone();
    return {...result,sources:result.sources.map(({features,...p})=>p)};
   } finally {for(const m of owned)m.delete()}

@@ -14,9 +14,10 @@ try{
   const ready=await next();if(ready.type!=='ready')throw Error(JSON.stringify(ready));
   const w=160,h=120,results=[];
   function scene(frame,{pan=0,object=0,noise=0,brightness=0,contrast=1}={}){const data=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const xx=x-pan*frame;let lum=95+18*Math.sin(xx*.37)*Math.cos(y*.31)+12*Math.sin(xx*.73+y*.61);const ox=xx-35-object*frame;if(object&&ox>=0&&ox<20&&y>=42&&y<62)lum=145+24*Math.sin(ox*.65)*Math.cos(y*.6);lum=110+(lum-110)*contrast;lum+=brightness*Math.sin(frame*.7)+noise*Math.sin(x*13+y*7+frame*19);const i=(y*w+x)*4;data[i]=data[i+1]=data[i+2]=lum;data[i+3]=255;}return data;}
+  function assertMask(mask){if(!mask||mask.width!==80||mask.height>160||mask.data.length!==mask.width*mask.height||!mask.data.some(v=>v>0))throw Error('Missing or invalid foreground mask')}
   for(const [name,options,expected] of [['static',{},false],['noise',{noise:2},false],['exposure',{brightness:15},false],['camera pan',{pan:1},false],['small object',{object:1},true],['slow object',{object:.5},true],['pan and object',{pan:1,object:1},true],['flat static',{contrast:.2,noise:1},false],['flat moving object',{contrast:.2,object:1},true]]){
    worker.postMessage({type:'reset'});let detected=0,offTarget=0,cost=0;
-   for(let f=0;f<24;f++){const data=scene(f,options),reply=next();worker.postMessage({type:'frame',data,width:w,height:h,time:f*83,maximum:10,sensitivity:.5,generation:1},[data.buffer]);const r=await reply;if(r.type!=='result')throw Error(JSON.stringify(r));const sources=r.cameraUncertain?[]:r.sources;if(sources.length)detected++;cost+=r.processingMs;for(const p of sources)if(expected&&(p.y<.25||p.y>.65))offTarget++;}
+   for(let f=0;f<24;f++){const data=scene(f,options),reply=next();worker.postMessage({type:'frame',data,width:w,height:h,time:f*83,maximum:10,sensitivity:.5,generation:1},[data.buffer]);const r=await reply;if(r.type!=='result')throw Error(JSON.stringify(r));const sources=r.cameraUncertain?[]:r.sources;if(sources.length){detected++;assertMask(r.foreground)}else if(r.foreground)throw Error('Mask without confirmed motion');cost+=r.processingMs;for(const p of sources)if(expected&&(p.y<.25||p.y>.65))offTarget++;}
    results.push({name,expected,detected,offTarget,averageMs:cost/24});
   }
   worker.terminate();return results;
@@ -91,6 +92,31 @@ try{
  });
  console.log({regionalTone});assert.equal(regionalTone.outside,0);assert(regionalTone.noiseRatio>5);assert(regionalTone.cleared);assert.equal(regionalTone.regionOnlyUploads,1);assert(regionalTone.detailDifference>60);assert.equal(regionalTone.error,0);
  for(const s of regionalTone.sizes){assert(s.width<=320&&s.height<=640&&s.width*s.height<=160000)}
+
+
+ // Foreground mask follows an irregular shape, keeps grain and uploads only on changes.
+ const maskCheck=await page.evaluate(async()=>{
+  const {PixelPreview}=await import('./pixel-preview.js?v=foreground-1');
+  const source=document.createElement('canvas');source.width=source.height=64;source.currentTime=1;
+  const c=source.getContext('2d');c.fillStyle='rgb(80,80,80)';c.fillRect(0,0,64,64);
+  const out=document.createElement('canvas'),effect=new PixelPreview(out),gl=effect.gl;
+  const read=()=>{const d=new Uint8Array(64*64*4);gl.readPixels(0,0,64,64,gl.RGBA,gl.UNSIGNED_BYTE,d);return d};
+  effect.draw(source,64,64,.65,false,0,[],false);const base=read();
+  const data=new Uint8Array(64*64);
+  for(let y=8;y<40;y++)for(let x=8;x<40;x++)if(x<20||y<20)data[y*64+x]=255;
+  const mask={width:64,height:64,data,time:1};
+  let uploads=0;const upload=gl.texImage2D.bind(gl);gl.texImage2D=(...args)=>{uploads++;return upload(...args)};
+  effect.draw(source,64,64,.65,false,0,[],false,mask);const masked=read();
+  effect.draw(source,64,64,.65,false,0,[],false,mask);
+  const cachedUploads=uploads;
+  const at=(x,y)=>((63-y)*64+x)*4;
+  let detailNoise=0;for(let y=10;y<18;y++)for(let x=10;x<18;x++)detailNoise+=Math.abs(masked[at(x,y)]-masked[at(x+1,y)]);
+  effect.draw(source,64,64,.65,false,0,[],false,null);const cleared=read();
+  return {cachedUploads,backgroundLift:masked[at(50,50)]-base[at(50,50)],hole:masked[at(30,30)],background:masked[at(50,50)],detailNoise,cleared:cleared.every((v,i)=>v===base[i]),error:gl.getError()};
+ });
+ console.log({maskCheck});assert.equal(maskCheck.cachedUploads,1);assert(maskCheck.backgroundLift>20);
+ assert.equal(maskCheck.hole,maskCheck.background,'Empty part of the box stays background');
+ assert(maskCheck.detailNoise>100,'Foreground retains strong fine grain');assert(maskCheck.cleared);assert.equal(maskCheck.error,0);
 
  // Fine mosaic keeps sub-cell detail, inverts tones and reverts exactly.
  const mosaicCheck=await page.evaluate(async()=>{
