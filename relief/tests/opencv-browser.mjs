@@ -114,7 +114,7 @@ try{
   effect.draw(source,64,64,.65,false,0,[],false,null);const cleared=read();
   return {cachedUploads,backgroundLift:masked[at(50,50)]-base[at(50,50)],hole:masked[at(30,30)],background:masked[at(50,50)],detailNoise,cleared:cleared.every((v,i)=>v===base[i]),error:gl.getError()};
  });
- console.log({maskCheck});assert.equal(maskCheck.cachedUploads,1);assert(maskCheck.backgroundLift>20);
+ console.log({maskCheck});assert.equal(maskCheck.cachedUploads,1);assert.equal(maskCheck.backgroundLift,0,'Motion appearing must not change background contrast');
  assert.equal(maskCheck.hole,maskCheck.background,'Empty part of the box stays background');
  assert(maskCheck.detailNoise>100,'Foreground retains strong fine grain');assert(maskCheck.cleared);assert.equal(maskCheck.error,0);
 

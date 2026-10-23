@@ -1,4 +1,4 @@
-import {PixelPreview} from './pixel-preview.js?v=foreground-1';
+import {PixelPreview} from './pixel-preview.js?v=steady-background-1';
 import {previewFilter,PrintTexture} from './preview-tone.js?v=mosaic-1';
 const printTexture=new PrintTexture();
 let mosaicLook=true;try{mosaicLook=localStorage.getItem('relief-view-style')!=='original'}catch{}

@@ -46,8 +46,7 @@ void main(){
  // A soft threshold keeps more tonal detail than a hard black/white cut.
  gray=mix(gray,smoothstep(.25,.75,gray),moving*.2);
  gray=mix(gray,1.-gray,mosaic);
- // Compress background contrast only while a confirmed foreground mask is present.
- gray=mix(gray,.5+(gray-.5)*.55,useMask*(1.-moving)*.85);
+ // Background tone stays fixed; only masked regions receive extra contrast and grain.
  // Per-pixel noise, no repeating dot tile. Add grain after sampling and contrast.
  gray=clamp(gray+(hash(floor(gl_FragCoord.xy))-.5)*(grain+moving*.45),0.,1.);
  gl_FragColor=vec4(vec3(gray),1.);
